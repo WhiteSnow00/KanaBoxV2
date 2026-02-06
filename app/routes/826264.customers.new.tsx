@@ -1,10 +1,3 @@
-/**
- * Admin - Create Customer with Initial Payment
- * 
- * Single form to create customer + initial payment atomically.
- * Located at /826264/customers/new
- */
-
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { redirect, json, useActionData, Form, Link } from "@remix-run/react";
 import { useState } from "react";
@@ -55,7 +48,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const errors: ActionData["errors"] = {};
 
-  // Validate customer name
   if (!displayName) {
     errors.displayName = "Tên là bắt buộc";
   } else if (displayName.length < 1) {
@@ -64,7 +56,6 @@ export async function action({ request }: ActionFunctionArgs) {
     errors.displayName = "Tên tối đa 60 ký tự";
   }
 
-  // Validate amount
   const amount = parseFloat(amountStr);
   if (!amountStr || isNaN(amount) || amount <= 0) {
     errors.amount = "Số tiền phải là số dương";
@@ -72,13 +63,11 @@ export async function action({ request }: ActionFunctionArgs) {
     errors.amount = "Số tiền VND phải là số nguyên (không có phần thập phân)";
   }
 
-  // Validate months
   const months = parseInt(monthsStr, 10);
   if (!monthsStr || isNaN(months) || months < 1) {
     errors.months = "Số tháng tối thiểu là 1";
   }
 
-  // Validate paidDate
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!paidDate || !dateRegex.test(paidDate)) {
     errors.paidDate = "Vui lòng nhập ngày hợp lệ (YYYY-MM-DD)";
@@ -108,15 +97,12 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
-  // All validation passed - create customer and payment atomically
   let customerId: string | null = null;
 
   try {
-    // Step 1: Create customer
     const customer = await createCustomer({ displayName, note: note || undefined });
     customerId = customer._id.toString();
 
-    // Step 2: Create initial payment
     await createPayment({
       customerId,
       paidDate,
@@ -128,7 +114,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
     return redirect(`/826264/customers/${customerId}`);
   } catch (error) {
-    // If payment creation failed but customer was created, rollback by deleting customer
     if (customerId) {
       try {
         await deleteCustomer(customerId);
@@ -224,7 +209,6 @@ export default function AdminAddCustomer() {
             </div>
           )}
 
-          {/* Customer Name */}
           <div>
             <label
               htmlFor="name"
@@ -255,7 +239,6 @@ export default function AdminAddCustomer() {
             )}
           </div>
 
-          {/* Customer Note */}
           <div>
             <label
               htmlFor="note"
@@ -278,7 +261,6 @@ export default function AdminAddCustomer() {
             Thanh toán ban đầu
             </h2>
 
-            {/* Currency */}
             <div className="mb-4">
               <label
                 htmlFor="currency"
@@ -303,7 +285,6 @@ export default function AdminAddCustomer() {
               </p>
             </div>
 
-            {/* Amount */}
             <div className="mb-4">
               <label
                 htmlFor="amount"
@@ -350,7 +331,6 @@ export default function AdminAddCustomer() {
               )}
             </div>
 
-            {/* Months */}
             <div className="mb-4">
               <label
                 htmlFor="months"
@@ -380,7 +360,6 @@ export default function AdminAddCustomer() {
               </p>
             </div>
 
-            {/* Paid Date */}
             <div className="mb-4">
               <label
                 htmlFor="paidDate"
@@ -403,7 +382,6 @@ export default function AdminAddCustomer() {
               </p>
             </div>
 
-            {/* Payment Note */}
             <div>
               <label
                 htmlFor="paymentNote"
@@ -422,7 +400,6 @@ export default function AdminAddCustomer() {
             </div>
           </div>
 
-          {/* Submit */}
           <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
             <Link
               to="/826264"

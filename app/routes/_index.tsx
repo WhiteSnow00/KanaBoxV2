@@ -1,10 +1,3 @@
-/**
- * PUBLIC HOME - Members List (View-Only)
- * 
- * Public page showing customer list with statuses.
- * No admin actions - view only.
- */
-
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
 import { listCustomers } from "~/models/customer.server";
@@ -29,7 +22,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const lang = normalizePublicLang(url.searchParams.get("lang"));
   const strings = getPublicStrings(lang);
 
-  // Get all customers (including hidden ones, we'll filter manually for renewal cancelled)
   const customers = await listCustomers(searchQuery, { publicOnly: false });
 
   const today = getTodayDateOnly();
@@ -45,7 +37,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
         label: strings.statusLabels[computedStatus.status],
       };
       
-      // Check if customer should be hidden from public
       const isHidden = customer.isPublicHidden || 
         (customer.renewalCancelled && latestPayment?.endDate && today > latestPayment.endDate);
       
@@ -72,7 +63,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     })
   );
 
-  // Filter out hidden customers for public view
   const publicCustomers = customersWithStatus.filter((c) => !c.isHidden);
 
   return json({
@@ -88,7 +78,6 @@ export default function PublicHome() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -106,7 +95,6 @@ export default function PublicHome() {
         />
       </div>
 
-      {/* Status Legend */}
       <div className="flex flex-wrap gap-3 text-sm">
         <span className="font-medium text-gray-700">
           {strings.statusLegendLabel}
@@ -129,7 +117,6 @@ export default function PublicHome() {
         </span>
       </div>
 
-      {/* Customer Table - Public view (read-only, no links) */}
       <CustomerTable
         customers={customers}
         basePath="/customers"

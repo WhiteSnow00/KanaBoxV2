@@ -1,10 +1,3 @@
-/**
- * Admin - Edit Payment Route
- * 
- * Form to update a payment.
- * Located at /826264/payments/:paymentId/edit
- */
-
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -108,7 +101,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   const errors: ActionData["errors"] = {};
 
-  // Validate amount
   const amount = parseFloat(amountStr);
   if (!amountStr || isNaN(amount) || amount <= 0) {
     errors.amount = "Số tiền phải là số dương";
@@ -116,13 +108,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
     errors.amount = "Số tiền VND phải là số nguyên (không có phần thập phân)";
   }
 
-  // Validate months
   const months = parseInt(monthsStr, 10);
   if (!monthsStr || isNaN(months) || months < 1) {
     errors.months = "Số tháng tối thiểu là 1";
   }
 
-  // Validate paidDate
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!paidDate || !dateRegex.test(paidDate)) {
     errors.paidDate = "Vui lòng nhập ngày hợp lệ (YYYY-MM-DD)";
@@ -204,7 +194,6 @@ export default function AdminEditPayment() {
 
   return (
     <div className="max-w-2xl">
-      {/* Breadcrumb */}
       <div className="mb-6">
         <Link
           to={`/826264/customers/${customer._id}`}
@@ -216,7 +205,6 @@ export default function AdminEditPayment() {
         <p className="mt-1 text-sm text-gray-500">Thành viên: {customer.name}</p>
       </div>
 
-      {/* Form */}
       <div className="bg-white shadow rounded-lg">
         <Form method="post" className="space-y-6 p-6">
           {actionData?.errors?.form && (
@@ -225,7 +213,6 @@ export default function AdminEditPayment() {
             </div>
           )}
 
-          {/* Currency Selection */}
           <div>
             <label
               htmlFor="currency"
@@ -250,7 +237,6 @@ export default function AdminEditPayment() {
             </p>
           </div>
 
-          {/* Amount */}
           <div>
             <label
               htmlFor="amount"
@@ -297,7 +283,6 @@ export default function AdminEditPayment() {
             )}
           </div>
 
-          {/* Months */}
           <div>
             <label
               htmlFor="months"
@@ -332,7 +317,6 @@ export default function AdminEditPayment() {
             )}
           </div>
 
-          {/* Paid Date */}
           <div>
             <label
               htmlFor="paidDate"
@@ -360,7 +344,6 @@ export default function AdminEditPayment() {
             </p>
           </div>
 
-          {/* Note */}
           <div>
             <label
               htmlFor="note"
@@ -378,7 +361,6 @@ export default function AdminEditPayment() {
             />
           </div>
 
-          {/* Submit Buttons */}
           <div className="flex items-center justify-end gap-4">
             <Link
               to={`/826264/customers/${customer._id}`}

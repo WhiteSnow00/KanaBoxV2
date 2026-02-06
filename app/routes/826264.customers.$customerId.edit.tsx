@@ -1,10 +1,3 @@
-/**
- * Admin - Edit Customer Route
- * 
- * Form to update customer name and note.
- * Located at /826264/customers/:customerId/edit
- */
-
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -17,7 +10,6 @@ function isDuplicateDisplayNameError(error: unknown): boolean {
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    // Mongo duplicate key error code
     (error as { code?: unknown }).code === 11000
   );
 }
@@ -82,7 +74,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   const errors: ActionData["errors"] = {};
 
-  // Validate name
   if (!displayNameTrimmed) {
     errors.displayName = "Tên là bắt buộc";
   } else if (displayNameTrimmed.length > 60) {
@@ -138,7 +129,6 @@ export default function AdminEditCustomer() {
 
   return (
     <div className="max-w-2xl">
-      {/* Breadcrumb */}
       <div className="mb-6">
         <Link
           to={`/826264/customers/${customer._id}`}
@@ -151,7 +141,6 @@ export default function AdminEditCustomer() {
         </h1>
       </div>
 
-      {/* Form */}
       <div className="bg-white shadow rounded-lg">
         <Form method="post" className="space-y-6 p-6">
           {actionData?.errors?.form && (
@@ -160,7 +149,6 @@ export default function AdminEditCustomer() {
             </div>
           )}
 
-          {/* Name Field */}
           <div>
             <label
               htmlFor="name"
@@ -189,7 +177,6 @@ export default function AdminEditCustomer() {
             )}
           </div>
 
-          {/* Note Field */}
           <div>
             <label
               htmlFor="note"
@@ -207,7 +194,6 @@ export default function AdminEditCustomer() {
             />
           </div>
 
-          {/* Submit Buttons */}
           <div className="flex items-center justify-end gap-4">
             <Link
               to={`/826264/customers/${customer._id}`}

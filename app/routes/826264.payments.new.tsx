@@ -1,10 +1,3 @@
-/**
- * Admin - Add Payment Route
- * 
- * Form to create a new payment.
- * Located at /826264/payments/new
- */
-
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -209,7 +202,6 @@ export default function AdminAddPayment() {
 
   return (
     <div className="max-w-2xl">
-      {/* Breadcrumb */}
       <div className="mb-6">
         {customer ? (
           <Link
@@ -229,7 +221,6 @@ export default function AdminAddPayment() {
         <h1 className="mt-2 text-2xl font-bold text-gray-900">Thêm thanh toán</h1>
       </div>
 
-      {/* Form */}
       <div className="bg-white shadow rounded-lg">
         <Form method="post" className="space-y-6 p-6">
           {actionData?.errors?.form && (
@@ -238,7 +229,6 @@ export default function AdminAddPayment() {
             </div>
           )}
 
-          {/* Customer Selection */}
           <div>
             <label
               htmlFor="customerId"
@@ -285,7 +275,6 @@ export default function AdminAddPayment() {
             )}
           </div>
 
-          {/* Currency Selection */}
           <div>
             <label
               htmlFor="currency"
@@ -310,7 +299,6 @@ export default function AdminAddPayment() {
             </p>
           </div>
 
-          {/* Amount */}
           <div>
             <label
               htmlFor="amount"
@@ -352,7 +340,6 @@ export default function AdminAddPayment() {
             )}
           </div>
 
-          {/* Months */}
           <div>
             <label
               htmlFor="months"
@@ -387,7 +374,6 @@ export default function AdminAddPayment() {
             )}
           </div>
 
-          {/* Paid Date */}
           <div>
             <label
               htmlFor="paidDate"
@@ -415,7 +401,6 @@ export default function AdminAddPayment() {
             </p>
           </div>
 
-          {/* Note */}
           <div>
             <label
               htmlFor="note"
@@ -433,7 +418,6 @@ export default function AdminAddPayment() {
             />
           </div>
 
-          {/* Submit Buttons */}
           <div className="flex items-center justify-end gap-4">
             <Link
               to={

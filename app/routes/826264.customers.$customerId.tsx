@@ -1,15 +1,3 @@
-/**
- * Admin Customer Detail Route
- * 
- * Shows customer details with admin actions:
- * - Edit customer (name, note)
- * - Delete customer
- * - Add payment
- * - Edit/Delete payments
- * - Cancel Renewal (Hide/Unhide from public)
- * - Full payment history
- */
-
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData, useOutlet, Link, Form, redirect } from "@remix-run/react";
 import { ObjectId } from "mongodb";
@@ -145,7 +133,6 @@ export default function AdminCustomerDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
       <div>
         <Link
           to="/826264"
@@ -155,7 +142,6 @@ export default function AdminCustomerDetail() {
         </Link>
       </div>
 
-      {/* Customer Header */}
       <div
         className={`bg-white shadow rounded-lg overflow-hidden ${
           latestStatus.status === "none"
@@ -192,7 +178,6 @@ export default function AdminCustomerDetail() {
               </div>
             </div>
             <div className="flex gap-3 flex-wrap items-center">
-              {/* Cancel/Resume Renewal Controls */}
               {customer.renewalCancelled ? (
                 <Form method="post" className="inline">
                   <input type="hidden" name="intent" value="resumeRenewal" />
@@ -217,7 +202,6 @@ export default function AdminCustomerDetail() {
                 </Form>
               )}
               
-              {/* Hide/Unhide Controls */}
               {customer.isPublicHidden ? (
                 <Form method="post" className="inline">
                   <input type="hidden" name="intent" value="unhide" />
@@ -272,7 +256,6 @@ export default function AdminCustomerDetail() {
             </div>
           </div>
 
-          {/* Customer Note */}
           {customer.note && (
             <div className="mt-4 bg-gray-50 rounded-md p-4">
               <h3 className="text-sm font-medium text-gray-700">Ghi chú</h3>
@@ -284,7 +267,6 @@ export default function AdminCustomerDetail() {
         </div>
       </div>
 
-      {/* Payment History */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">Lịch sử thanh toán</h2>

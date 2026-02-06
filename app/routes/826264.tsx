@@ -1,10 +1,3 @@
-/**
- * Admin Layout Route
- * 
- * Secret admin path: /826264
- * Contains admin navigation and outlet for admin routes.
- */
-
 import {
   Link,
   Outlet,
@@ -59,7 +52,6 @@ function AdminNavigation() {
           </div>
         </div>
       </div>
-      {/* Mobile menu */}
       <div className="md:hidden border-t border-gray-700">
         <div className="px-2 py-3 space-y-1 sm:px-3">
           <Link

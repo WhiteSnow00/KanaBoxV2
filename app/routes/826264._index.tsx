@@ -1,12 +1,3 @@
-/**
- * Admin Home - Dashboard with Stats + Customer List
- * 
- * Shows:
- * - Statistics cards (total, active, due, grace, expired)
- * - Monthly revenue table
- * - Customer list table (same as public but with admin links)
- */
-
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData, Link } from "@remix-run/react";
 import { listCustomers, countCustomers } from "~/models/customer.server";
@@ -39,7 +30,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const searchQuery = url.searchParams.get("q") || "";
 
-  // Get stats
   const totalCustomers = await countCustomers();
   const customers = await listCustomers(searchQuery);
 
@@ -82,7 +72,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     })
   );
 
-  // Monthly totals
   const today = getTodayDateOnly();
   const currentMonthKey = getMonthBucket(today);
   const startWindow = `${currentMonthKey}-01`;
@@ -166,7 +155,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
           Bảng điều khiển (Quản trị)
@@ -176,7 +164,6 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
         <StatusCard
           title="Tổng số thành viên"
@@ -215,7 +202,6 @@ export default function AdminDashboard() {
         />
       </div>
 
-      {/* Customer List */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">
@@ -235,7 +221,6 @@ export default function AdminDashboard() {
         />
       </div>
 
-      {/* Monthly Revenue Table */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">

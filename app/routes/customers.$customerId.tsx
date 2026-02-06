@@ -1,10 +1,3 @@
-/**
- * PUBLIC Customer Detail Route (Read-Only)
- * 
- * Public view of customer details.
- * Shows status and latest payment info only - no admin actions.
- */
-
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
 import { ObjectId } from "mongodb";
@@ -110,7 +103,6 @@ export default function PublicCustomerDetail() {
         />
       </div>
 
-      {/* Customer Header */}
       <div
         className={`bg-white shadow rounded-lg overflow-hidden ${
           status.status === "none"
@@ -136,7 +128,6 @@ export default function PublicCustomerDetail() {
             </div>
           </div>
 
-          {/* Customer Note */}
           {customer.note && (
             <div className="mt-4 bg-gray-50 rounded-md p-4">
               <h3 className="text-sm font-medium text-gray-700">
@@ -150,7 +141,6 @@ export default function PublicCustomerDetail() {
         </div>
       </div>
 
-      {/* Latest Payment Info (Read-Only) */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">

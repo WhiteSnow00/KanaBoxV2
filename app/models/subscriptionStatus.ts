@@ -1,21 +1,11 @@
-/**
- * Subscription Status Logic (Client-Safe)
- * 
- * This module contains pure status computation logic with NO database access.
- * Can be imported by both server and client code.
- */
-
 import { diffDaysDateOnly, getTodayDateOnly } from "~/utils/date";
 
-// Status computation constants
 export const DUE_SOON_DAYS = 3;
 export const GRACE_DAYS = 7;
 
-// Base prices for subscription
 export const BASE_PRICE_VND = 50000;
 export const BASE_PRICE_USD = 2;
 
-// FX rate for USD to VND conversion
 export const USD_TO_VND_RATE = 25800;
 
 export type Currency = "VND" | "USD";
@@ -30,19 +20,9 @@ export interface StatusInfo {
   daysPastEnd: number | null;
 }
 
-/**
- * Compute subscription status based on endDate and today's date.
- * 
- * Status rules:
- * - ACTIVE (GREEN): today < endDate - DUE_SOON_DAYS
- * - DUE (YELLOW): today >= endDate - DUE_SOON_DAYS AND today <= endDate
- * - GRACE (ORANGE): today > endDate AND today <= endDate + GRACE_DAYS
- * - EXPIRED (RED): today > endDate + GRACE_DAYS
- */
 export function computeStatus(endDate: string | null): StatusInfo {
   const today = getTodayDateOnly();
 
-  // No end date means no payment history
   if (!endDate) {
     return {
       status: "none",
@@ -54,9 +34,8 @@ export function computeStatus(endDate: string | null): StatusInfo {
   }
 
   const daysToEnd = diffDaysDateOnly(endDate, today);
-  const daysPastEnd = -daysToEnd; // Positive if expired
+  const daysPastEnd = -daysToEnd;
 
-  // ACTIVE: today < endDate - DUE_SOON_DAYS
   if (daysToEnd > DUE_SOON_DAYS) {
     return {
       status: "active",
@@ -67,7 +46,6 @@ export function computeStatus(endDate: string | null): StatusInfo {
     };
   }
 
-  // DUE: endDate - DUE_SOON_DAYS <= today <= endDate
   if (daysToEnd >= 0 && daysToEnd <= DUE_SOON_DAYS) {
     return {
       status: "due",
@@ -78,7 +56,6 @@ export function computeStatus(endDate: string | null): StatusInfo {
     };
   }
 
-  // GRACE: endDate < today <= endDate + GRACE_DAYS
   if (daysPastEnd > 0 && daysPastEnd <= GRACE_DAYS) {
     return {
       status: "grace",
@@ -89,7 +66,6 @@ export function computeStatus(endDate: string | null): StatusInfo {
     };
   }
 
-  // EXPIRED: today > endDate + GRACE_DAYS
   return {
     status: "expired",
     className: "bg-status-expired border-status-expired-border",
@@ -99,11 +75,6 @@ export function computeStatus(endDate: string | null): StatusInfo {
   };
 }
 
-/**
- * Calculate recommended months based on amount and currency.
- * - VND: max(1, floor(amount / 50000))
- * - USD: max(1, floor(amount / 2))
- */
 export function calculateRecommendedMonths(
   amount: number,
   currency: Currency

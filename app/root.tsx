@@ -1,14 +1,3 @@
-/**
- * Root Layout Component
- * 
- * This is the top-level layout for the entire application.
- * It includes:
- * - Global navigation (PUBLIC only - no admin links)
- * - Global styles (Tailwind CSS)
- * - Error boundaries for error handling
- * - Meta tags and document structure
- */
-
 import {
   Links,
   Meta,
@@ -25,9 +14,6 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
 ];
 
-/**
- * Document component - renders the HTML shell
- */
 function Document({
   children,
   title = "Kana Box V2",
@@ -53,9 +39,6 @@ function Document({
   );
 }
 
-/**
- * Public Header component - no links, view-only
- */
 function PublicHeader() {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -70,9 +53,6 @@ function PublicHeader() {
   );
 }
 
-/**
- * Root layout component - wraps all pages
- */
 export default function App() {
   return (
     <Document>
@@ -84,9 +64,6 @@ export default function App() {
   );
 }
 
-/**
- * Global error boundary - catches errors in child routes
- */
 export function ErrorBoundary() {
   const error = useRouteError();
 

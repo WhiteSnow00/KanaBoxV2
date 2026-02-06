@@ -1,10 +1,3 @@
-/**
- * Customer Data Model
- * 
- * Server-only module for customer CRUD operations.
- * All functions interact directly with MongoDB.
- */
-
 import { ObjectId } from "mongodb";
 import { getDb } from "~/utils/db.server";
 import { getTodayDateOnly } from "~/utils/date";
@@ -33,10 +26,6 @@ export interface CustomerInput {
   note?: string;
 }
 
-/**
- * Create a new customer.
- * Throws on duplicate displayName error.
- */
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
@@ -54,13 +43,9 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
   return {
     _id: result.insertedId,
     ...customer,
-  } as Customer;
-}
+	  } as Customer;
+	}
 
-/**
- * List all customers, optionally filtered by search query and visibility.
- * Results are sorted by displayName.
- */
 export async function listCustomers(
   searchQuery?: string,
   options?: { publicOnly?: boolean }
@@ -71,14 +56,10 @@ export async function listCustomers(
   const filter: Record<string, unknown> = {};
   
   if (options?.publicOnly) {
-    // Public visibility rules:
-    // - Hide if isPublicHidden is true
-    // - Hide if renewalCancelled is true AND today > endDate (checked in route)
     filter.isPublicHidden = { $ne: true };
   }
   
   if (searchQuery && searchQuery.trim()) {
-    // Case-insensitive substring match on displayName
     filter.displayName = { $regex: searchQuery.trim(), $options: "i" };
   }
 
@@ -88,10 +69,6 @@ export async function listCustomers(
     .toArray();
 }
 
-/**
- * Get a single customer by ID.
- * Returns null if not found or invalid ID.
- */
 export async function getCustomerById(id: string): Promise<Customer | null> {
   if (!ObjectId.isValid(id)) {
     return null;
@@ -103,9 +80,6 @@ export async function getCustomerById(id: string): Promise<Customer | null> {
   return collection.findOne({ _id: new ObjectId(id) });
 }
 
-/**
- * Update a customer's note.
- */
 export async function updateCustomerNote(
   id: string,
   note: string | undefined
@@ -131,18 +105,12 @@ export async function updateCustomerNote(
   return result;
 }
 
-/**
- * Count total customers.
- */
 export async function countCustomers(): Promise<number> {
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
   return collection.countDocuments();
 }
 
-/**
- * Check if a customer exists by displayName (case-insensitive exact match).
- */
 export async function customerExistsByDisplayName(name: string): Promise<boolean> {
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
@@ -152,9 +120,6 @@ export async function customerExistsByDisplayName(name: string): Promise<boolean
   return count > 0;
 }
 
-/**
- * Hide a customer from public view (mark as cancelled/hidden).
- */
 export async function hideCustomerFromPublic(
   id: string,
   reason?: string
@@ -182,9 +147,6 @@ export async function hideCustomerFromPublic(
   return result;
 }
 
-/**
- * Unhide a customer (make visible to public again).
- */
 export async function unhideCustomer(id: string): Promise<Customer | null> {
   if (!ObjectId.isValid(id)) {
     return null;
@@ -211,9 +173,6 @@ export async function unhideCustomer(id: string): Promise<Customer | null> {
   return result;
 }
 
-/**
- * Set renewal cancelled status for a customer.
- */
 export async function setRenewalCancelled(
   id: string,
   cancelled: boolean
@@ -247,10 +206,6 @@ export async function setRenewalCancelled(
   return result;
 }
 
-/**
- * Delete a customer by ID.
- * Used for rollback operations.
- */
 export async function deleteCustomer(id: string): Promise<boolean> {
   if (!ObjectId.isValid(id)) {
     return false;
@@ -263,10 +218,6 @@ export async function deleteCustomer(id: string): Promise<boolean> {
   return result.deletedCount === 1;
 }
 
-/**
- * Update a customer's displayName and note with name history tracking.
- * Returns null if not found or invalid ID.
- */
 export async function updateCustomer(
   id: string,
   input: { displayName: string; note?: string }
@@ -278,7 +229,6 @@ export async function updateCustomer(
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
 
-  // Get current customer to save name to history
   const current = await collection.findOne({ _id: new ObjectId(id) });
   if (!current) {
     return null;
@@ -288,7 +238,6 @@ export async function updateCustomer(
 
   const nextDisplayName = input.displayName.trim();
 
-  // Build update operations
   const setOps: Record<string, unknown> = {
     displayName: nextDisplayName,
     updatedAt: new Date(),
@@ -296,8 +245,6 @@ export async function updateCustomer(
 
   const unsetOps: Record<string, unknown> = {};
 
-  // If note key is present (even if undefined), update it.
-  // This allows callers to clear the note by sending an empty string or undefined.
   if (Object.prototype.hasOwnProperty.call(input, "note")) {
     const nextNote = input.note?.trim() || "";
     if (nextNote) {
@@ -312,7 +259,6 @@ export async function updateCustomer(
     updateDoc.$unset = unsetOps;
   }
 
-  // Only add to history if name actually changed
   if (current.displayName !== nextDisplayName) {
     const historyEntry: NameHistoryEntry = {
       name: current.displayName,
@@ -330,26 +276,14 @@ export async function updateCustomer(
   return result;
 }
 
-/**
- * Cancel renewal for a customer (sets renewalCancelled flag).
- * Returns the updated customer or null.
- */
 export async function cancelRenewal(id: string): Promise<Customer | null> {
   return setRenewalCancelled(id, true);
 }
 
-/**
- * Resume renewal for a customer (clears renewalCancelled flag).
- * Returns the updated customer or null.
- */
 export async function resumeRenewal(id: string): Promise<Customer | null> {
   return setRenewalCancelled(id, false);
 }
 
-/**
- * Delete a customer and all their payments.
- * Returns true if customer was deleted.
- */
 export async function deleteCustomerWithPayments(customerId: string): Promise<boolean> {
   if (!ObjectId.isValid(customerId)) {
     return false;
@@ -357,12 +291,10 @@ export async function deleteCustomerWithPayments(customerId: string): Promise<bo
 
   const db = await getDb();
   
-  // Delete all payments for this customer
   await db.collection("payments").deleteMany({
     customerId: new ObjectId(customerId),
   });
   
-  // Delete the customer
   const result = await db.collection<Customer>("customers").deleteOne({
     _id: new ObjectId(customerId),
   });
