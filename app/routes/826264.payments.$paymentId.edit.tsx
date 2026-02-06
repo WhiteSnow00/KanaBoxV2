@@ -14,6 +14,8 @@ import {
   BASE_PRICE_USD,
 } from "~/models/subscriptionStatus";
 
+const VND_AMOUNT_PRESETS = [50000, 100000, 150000, 200000, 250000, 300000] as const;
+
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
   { title: `Sửa thanh toán - ${data?.customer.name || "Thành viên"} - Quản trị - Kana Box V2` },
 ];
@@ -244,32 +246,65 @@ export default function AdminEditPayment() {
             >
               Số tiền <span className="text-red-500">*</span>
             </label>
-            <div className="relative mt-1">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className="text-gray-500 sm:text-sm">
-                  {currency === "VND" ? "₫" : "$"}
-                </span>
-              </div>
-              <input
-                type="number"
-                name="amount"
-                id="amount"
-                min={currency === "VND" ? "1" : "0.01"}
-                step={currency === "VND" ? "1" : "0.01"}
-                value={amount || ""}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value) || 0;
-                  setAmount(val);
-                  if (!monthsManuallyEdited) {
-                    setMonths(calculateRecommendedMonths(val, currency));
+            <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {currency === "VND" && (
+                <select
+                  id="amountPreset"
+                  value={
+                    VND_AMOUNT_PRESETS.includes(
+                      Math.round(amount) as (typeof VND_AMOUNT_PRESETS)[number]
+                    )
+                      ? String(Math.round(amount))
+                      : "custom"
                   }
-                }}
-                className={`block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                  actionData?.errors?.amount ? "border-red-300" : ""
-                }`}
-                placeholder={currency === "VND" ? "50000" : "2.00"}
-                required
-              />
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (next === "custom") return;
+                    const nextAmount = parseInt(next, 10) || 0;
+                    setAmount(nextAmount);
+                    if (!monthsManuallyEdited) {
+                      setMonths(calculateRecommendedMonths(nextAmount, currency));
+                    }
+                  }}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="50000">50k</option>
+                  <option value="100000">100k</option>
+                  <option value="150000">150k</option>
+                  <option value="200000">200k</option>
+                  <option value="250000">250k</option>
+                  <option value="300000">300k</option>
+                  <option value="custom">Tùy chỉnh</option>
+                </select>
+              )}
+
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">
+                    {currency === "VND" ? "₫" : "$"}
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  name="amount"
+                  id="amount"
+                  min={currency === "VND" ? "1" : "0.01"}
+                  step={currency === "VND" ? "1" : "0.01"}
+                  value={amount || ""}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setAmount(val);
+                    if (!monthsManuallyEdited) {
+                      setMonths(calculateRecommendedMonths(val, currency));
+                    }
+                  }}
+                  className={`block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                    actionData?.errors?.amount ? "border-red-300" : ""
+                  }`}
+                  placeholder={currency === "VND" ? "50000" : "2.00"}
+                  required
+                />
+              </div>
             </div>
             {currency === "VND" && (
               <p className="mt-1 text-xs text-gray-500">
