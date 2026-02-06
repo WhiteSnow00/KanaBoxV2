@@ -6,18 +6,25 @@
  */
 
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { json, useLoaderData, Link } from "@remix-run/react";
+import { json, useLoaderData } from "@remix-run/react";
 import { ObjectId } from "mongodb";
 import { getCustomerById } from "~/models/customer.server";
 import { getLatestPaymentForCustomer } from "~/models/payment.server";
 import { computeStatus } from "~/models/subscriptionStatus";
+import PublicLanguageSelect from "~/components/PublicLanguageSelect";
+import { getPublicStrings, normalizePublicLang } from "~/i18n/public";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
-  { title: `${data?.customer.name || "Thành viên"} - Kana Box V2` },
+  {
+    title: `${data?.customer.name || getPublicStrings(data?.lang === "en" ? "en" : "vi").membersHeading} - Kana Box V2`,
+  },
 ];
 
-export async function loader({ params }: LoaderFunctionArgs) {
+export async function loader({ params, request }: LoaderFunctionArgs) {
   const { customerId } = params;
+  const url = new URL(request.url);
+  const lang = normalizePublicLang(url.searchParams.get("lang"));
+  const strings = getPublicStrings(lang);
 
   if (!customerId || !ObjectId.isValid(customerId)) {
     throw new Response("ID thành viên không hợp lệ", { status: 400 });
@@ -29,7 +36,11 @@ export async function loader({ params }: LoaderFunctionArgs) {
   }
 
   const latestPayment = await getLatestPaymentForCustomer(customerId);
-  const status = computeStatus(latestPayment?.endDate || null);
+  const computedStatus = computeStatus(latestPayment?.endDate || null);
+  const status = {
+    ...computedStatus,
+    label: strings.statusLabels[computedStatus.status],
+  };
 
   return json({
     customer: {
@@ -49,6 +60,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
         }
       : null,
     status,
+    lang,
   });
 }
 
@@ -84,15 +96,18 @@ function formatCurrency(amount: number, currency: string): string {
 }
 
 export default function PublicCustomerDetail() {
-  const { customer, latestPayment, status } = useLoaderData<typeof loader>();
+  const { customer, latestPayment, status, lang } = useLoaderData<typeof loader>();
+  const strings = getPublicStrings(lang);
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div>
-        <Link to="/" className="text-sm text-blue-600 hover:text-blue-900">
-          ← Quay lại danh sách thành viên
-        </Link>
+      <div className="flex justify-end">
+        <PublicLanguageSelect
+          lang={lang}
+          label={strings.languageLabel}
+          optionVi={strings.languageOptions.vi}
+          optionEn={strings.languageOptions.en}
+        />
       </div>
 
       {/* Customer Header */}
@@ -124,7 +139,9 @@ export default function PublicCustomerDetail() {
           {/* Customer Note */}
           {customer.note && (
             <div className="mt-4 bg-gray-50 rounded-md p-4">
-              <h3 className="text-sm font-medium text-gray-700">Ghi chú</h3>
+              <h3 className="text-sm font-medium text-gray-700">
+                {strings.customerDetail.note}
+              </h3>
               <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
                 {customer.note}
               </p>
@@ -137,7 +154,7 @@ export default function PublicCustomerDetail() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">
-            Trạng thái đăng ký
+            {strings.customerDetail.subscriptionStatusHeading}
           </h2>
         </div>
         <div className="p-6">
@@ -145,7 +162,7 @@ export default function PublicCustomerDetail() {
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <dt className="text-sm font-medium text-gray-500">
-                  Hết hạn kỳ hiện tại
+                  {strings.customerDetail.currentPeriodEnds}
                 </dt>
                 <dd
                   className={`mt-1 text-lg font-semibold ${
@@ -159,7 +176,7 @@ export default function PublicCustomerDetail() {
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">
-                  Thanh toán gần nhất
+                  {strings.customerDetail.latestPayment}
                 </dt>
                 <dd className="mt-1 text-lg font-semibold text-gray-900">
                   {formatCurrency(latestPayment.amount, latestPayment.currency)}
@@ -167,28 +184,32 @@ export default function PublicCustomerDetail() {
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">
-                  Ngày thanh toán
+                  {strings.customerDetail.paidDate}
                 </dt>
                 <dd className="mt-1 text-gray-900">{latestPayment.paidDate}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">
-                  Số tháng
+                  {strings.customerDetail.months}
                 </dt>
                 <dd className="mt-1 text-gray-900">
-                  {latestPayment.months} tháng
+                  {strings.customerTable.formatMonths(latestPayment.months)}
                 </dd>
               </div>
               {latestPayment.note && (
                 <div className="sm:col-span-2">
-                  <dt className="text-sm font-medium text-gray-500">Ghi chú</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    {strings.customerDetail.note}
+                  </dt>
                   <dd className="mt-1 text-gray-900">{latestPayment.note}</dd>
                 </div>
               )}
             </dl>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-500">Chưa có lịch sử thanh toán.</p>
+              <p className="text-gray-500">
+                {strings.customerDetail.noPaymentHistory}
+              </p>
             </div>
           )}
         </div>

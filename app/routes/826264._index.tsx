@@ -215,6 +215,26 @@ export default function AdminDashboard() {
         />
       </div>
 
+      {/* Customer List */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-gray-900">
+            Tất cả thành viên ({customers.length})
+          </h2>
+          <Link
+            to="/826264/customers/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Thêm thành viên
+          </Link>
+        </div>
+        <CustomerTable
+          customers={customers}
+          basePath="/826264/customers"
+          showAdminActions={true}
+        />
+      </div>
+
       {/* Monthly Revenue Table */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -269,26 +289,6 @@ export default function AdminDashboard() {
             </table>
           </div>
         </div>
-      </div>
-
-      {/* Customer List */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">
-            Tất cả thành viên ({customers.length})
-          </h2>
-          <Link
-            to="/826264/customers/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Thêm thành viên
-          </Link>
-        </div>
-        <CustomerTable
-          customers={customers}
-          basePath="/826264/customers"
-          showAdminActions={true}
-        />
       </div>
     </div>
   );

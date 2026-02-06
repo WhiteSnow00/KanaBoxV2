@@ -1,9 +1,6 @@
-import { redirect } from "@remix-run/node";
+import { Outlet } from "@remix-run/react";
 
-/**
- * Redirect /customers to public home at /
- * Keeps a single public entry point.
- */
-export function loader() {
-  return redirect("/");
+export default function CustomersLayout() {
+  return <Outlet />;
 }
+

@@ -14,14 +14,20 @@ import {
 } from "~/models/payment.server";
 import { getTodayDateOnly } from "~/utils/date";
 import CustomerTable from "~/components/CustomerTable";
+import PublicLanguageSelect from "~/components/PublicLanguageSelect";
+import { getPublicStrings, normalizePublicLang } from "~/i18n/public";
 
-export const meta: MetaFunction = () => [
-  { title: "Thành viên - Kana Box V2" },
-];
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  const lang = data?.lang === "en" ? "en" : "vi";
+  const strings = getPublicStrings(lang);
+  return [{ title: `${strings.membersHeading} - Kana Box V2` }];
+};
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const searchQuery = url.searchParams.get("q") || "";
+  const lang = normalizePublicLang(url.searchParams.get("lang"));
+  const strings = getPublicStrings(lang);
 
   // Get all customers (including hidden ones, we'll filter manually for renewal cancelled)
   const customers = await listCustomers(searchQuery, { publicOnly: false });
@@ -33,7 +39,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
       const latestPayment = await getLatestPaymentForCustomer(
         customer._id.toString()
       );
-      const status = computeStatus(latestPayment?.endDate || null);
+      const computedStatus = computeStatus(latestPayment?.endDate || null);
+      const status = {
+        ...computedStatus,
+        label: strings.statusLabels[computedStatus.status],
+      };
       
       // Check if customer should be hidden from public
       const isHidden = customer.isPublicHidden || 
@@ -68,40 +78,54 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return json({
     customers: publicCustomers,
     searchQuery,
+    lang,
   });
 }
 
 export default function PublicHome() {
-  const { customers, searchQuery } = useLoaderData<typeof loader>();
+  const { customers, lang } = useLoaderData<typeof loader>();
+  const strings = getPublicStrings(lang);
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Thành viên</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Tổng cộng có {customers.length} thành viên
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {strings.membersHeading}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {strings.membersCount(customers.length)}
+          </p>
+        </div>
+        <PublicLanguageSelect
+          lang={lang}
+          label={strings.languageLabel}
+          optionVi={strings.languageOptions.vi}
+          optionEn={strings.languageOptions.en}
+        />
       </div>
 
       {/* Status Legend */}
       <div className="flex flex-wrap gap-3 text-sm">
-        <span className="font-medium text-gray-700">Màu trạng thái:</span>
+        <span className="font-medium text-gray-700">
+          {strings.statusLegendLabel}
+        </span>
         <span className="inline-flex items-center">
           <span className="w-3 h-3 rounded-full bg-green-200 mr-1"></span>
-          Còn hạn
+          {strings.statusLabels.active}
         </span>
         <span className="inline-flex items-center">
           <span className="w-3 h-3 rounded-full bg-yellow-200 mr-1"></span>
-          Sắp đến hạn
+          {strings.statusLabels.due}
         </span>
         <span className="inline-flex items-center">
           <span className="w-3 h-3 rounded-full bg-orange-200 mr-1"></span>
-          Quá hạn (cao su)
+          {strings.statusLabels.grace}
         </span>
         <span className="inline-flex items-center">
           <span className="w-3 h-3 rounded-full bg-red-200 mr-1"></span>
-          Hết hạn
+          {strings.statusLabels.expired}
         </span>
       </div>
 
@@ -111,6 +135,7 @@ export default function PublicHome() {
         basePath="/customers"
         showAdminActions={false}
         readOnly={true}
+        i18n={strings.customerTable}
       />
     </div>
   );

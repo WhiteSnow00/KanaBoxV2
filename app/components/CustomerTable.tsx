@@ -23,11 +23,29 @@ export interface CustomerWithStatus {
   };
 }
 
+export interface CustomerTableI18n {
+  emptyTitle: string;
+  emptySubtitle?: string;
+  headers: {
+    name: string;
+    status: string;
+    endDate: string;
+    latestPayment: string;
+    months: string;
+    note: string;
+    actions: string;
+  };
+  noPayment: string;
+  view: string;
+  formatMonths: (months: number) => string;
+}
+
 interface CustomerTableProps {
   customers: CustomerWithStatus[];
   basePath: string;
   showAdminActions?: boolean;
   readOnly?: boolean;
+  i18n?: CustomerTableI18n;
 }
 
 function StatusBadge({
@@ -81,13 +99,32 @@ export default function CustomerTable({
   basePath,
   showAdminActions = false,
   readOnly = false,
+  i18n,
 }: CustomerTableProps) {
+  const t: CustomerTableI18n =
+    i18n || ({
+      emptyTitle: "Chưa có thành viên nào",
+      emptySubtitle: "Bắt đầu bằng cách thêm thành viên đầu tiên",
+      headers: {
+        name: "Tên",
+        status: "Trạng thái",
+        endDate: "Ngày hết hạn",
+        latestPayment: "Thanh toán gần nhất",
+        months: "Số tháng",
+        note: "Ghi chú",
+        actions: "Thao tác",
+      },
+      noPayment: "Chưa có thanh toán",
+      view: "Xem →",
+      formatMonths: (months: number) => `${months} tháng`,
+    } satisfies CustomerTableI18n);
+
   if (customers.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
-        <p className="text-lg font-medium">Chưa có thành viên nào</p>
-        {showAdminActions && (
-          <p className="mt-1">Bắt đầu bằng cách thêm thành viên đầu tiên</p>
+        <p className="text-lg font-medium">{t.emptyTitle}</p>
+        {showAdminActions && t.emptySubtitle && (
+          <p className="mt-1">{t.emptySubtitle}</p>
         )}
       </div>
     );
@@ -99,26 +136,26 @@ export default function CustomerTable({
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Tên
+              {t.headers.name}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Trạng thái
+              {t.headers.status}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Ngày hết hạn
+              {t.headers.endDate}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Thanh toán gần nhất
+              {t.headers.latestPayment}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Số tháng
+              {t.headers.months}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Ghi chú
+              {t.headers.note}
             </th>
             {!readOnly && (
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Thao tác
+                {t.headers.actions}
               </th>
             )}
           </tr>
@@ -170,14 +207,12 @@ export default function CustomerTable({
                       : `$${latestPayment.amount.toFixed(2)}`}
                   </>
                 ) : (
-                  <span className="text-gray-400">Chưa có thanh toán</span>
+                  <span className="text-gray-400">{t.noPayment}</span>
                 )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {latestPayment ? (
-                  <>
-                    {latestPayment.months} tháng
-                  </>
+                  <>{t.formatMonths(latestPayment.months)}</>
                 ) : (
                   <span className="text-gray-400">-</span>
                 )}
@@ -214,7 +249,7 @@ export default function CustomerTable({
                     to={`${basePath}/${customer._id}`}
                     className="text-blue-600 hover:text-blue-900 font-medium"
                   >
-                    Xem →
+                    {t.view}
                   </Link>
                 </td>
               )}
