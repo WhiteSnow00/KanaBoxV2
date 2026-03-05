@@ -1,9 +1,10 @@
+// app/routes/_index.tsx
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
 import { listCustomers } from "~/models/customer.server";
 import {
-  getLatestPaymentForCustomer,
   computeStatus,
+  listLatestPaymentsForAllCustomers,
 } from "~/models/payment.server";
 import { getTodayDateOnly } from "~/utils/date";
 import CustomerTable from "~/components/CustomerTable";
@@ -21,50 +22,43 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const searchQuery = url.searchParams.get("q") || "";
   const lang = normalizePublicLang(url.searchParams.get("lang"));
   const strings = getPublicStrings(lang);
-
   const customers = await listCustomers(searchQuery, { publicOnly: false });
-
   const today = getTodayDateOnly();
-
-  const customersWithStatus = await Promise.all(
-    customers.map(async (customer) => {
-      const latestPayment = await getLatestPaymentForCustomer(
-        customer._id.toString()
-      );
-      const computedStatus = computeStatus(latestPayment?.endDate || null);
-      const status = {
-        ...computedStatus,
-        label: strings.statusLabels[computedStatus.status],
-      };
-      
-      const isHidden = customer.isPublicHidden || 
-        (customer.renewalCancelled && latestPayment?.endDate && today > latestPayment.endDate);
-      
-      return {
-        customer: {
-          _id: customer._id.toString(),
-          name: customer.displayName,
-          note: customer.note,
-        },
-        latestPayment: latestPayment
-          ? {
-              _id: latestPayment._id.toString(),
-              paidDate: latestPayment.paidDate,
-              endDate: latestPayment.endDate,
-              currency: latestPayment.currency,
-              amount: latestPayment.amount,
-              months: latestPayment.months,
-              note: latestPayment.note,
-            }
-          : null,
-        status,
-        isHidden,
-      };
-    })
-  );
-
+  const latestPaymentsMap = await listLatestPaymentsForAllCustomers();
+  const customersWithStatus = customers.map((customer) => {
+    const latestPayment = latestPaymentsMap.get(customer._id.toString());
+    const computedStatus = computeStatus(latestPayment?.endDate || null);
+    const status = {
+      ...computedStatus,
+      label: strings.statusLabels[computedStatus.status],
+    };
+    const isHidden =
+      customer.isPublicHidden ||
+      (customer.renewalCancelled &&
+        latestPayment?.endDate &&
+        today > latestPayment.endDate);
+    return {
+      customer: {
+        _id: customer._id.toString(),
+        name: customer.displayName,
+        note: customer.note,
+      },
+      latestPayment: latestPayment
+        ? {
+          _id: latestPayment._id.toString(),
+          paidDate: latestPayment.paidDate,
+          endDate: latestPayment.endDate,
+          currency: latestPayment.currency,
+          amount: latestPayment.amount,
+          months: latestPayment.months,
+          note: latestPayment.note,
+        }
+        : null,
+      status,
+      isHidden,
+    };
+  });
   const publicCustomers = customersWithStatus.filter((c) => !c.isHidden);
-
   return json({
     customers: publicCustomers,
     searchQuery,
@@ -75,7 +69,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function PublicHome() {
   const { customers, lang } = useLoaderData<typeof loader>();
   const strings = getPublicStrings(lang);
-
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -94,7 +87,6 @@ export default function PublicHome() {
           optionEn={strings.languageOptions.en}
         />
       </div>
-
       <div className="flex flex-wrap gap-3 text-sm">
         <span className="font-medium text-gray-700">
           {strings.statusLegendLabel}
@@ -116,7 +108,6 @@ export default function PublicHome() {
           {strings.statusLabels.expired}
         </span>
       </div>
-
       <CustomerTable
         customers={customers}
         basePath="/customers"

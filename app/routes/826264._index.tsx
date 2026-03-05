@@ -1,11 +1,12 @@
+
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData, Link } from "@remix-run/react";
 import { listCustomers, countCustomers } from "~/models/customer.server";
 import {
-  getLatestPaymentForCustomer,
   computeStatus,
   listPaymentsForRevenueWindow,
   computeMonthlyTotals,
+  listLatestPaymentsForAllCustomers,
 } from "~/models/payment.server";
 import {
   addDaysDateOnly,
@@ -29,10 +30,8 @@ interface MonthlyTotal {
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const searchQuery = url.searchParams.get("q") || "";
-
   const totalCustomers = await countCustomers();
   const customers = await listCustomers(searchQuery);
-
   const statusCounts = {
     active: 0,
     due: 0,
@@ -40,38 +39,32 @@ export async function loader({ request }: LoaderFunctionArgs) {
     expired: 0,
     none: 0,
   };
-
-  const customersWithStatus = await Promise.all(
-    customers.map(async (customer) => {
-      const latestPayment = await getLatestPaymentForCustomer(
-        customer._id.toString()
-      );
-      const status = computeStatus(latestPayment?.endDate || null);
-      statusCounts[status.status]++;
-
-      return {
-        customer: {
-          _id: customer._id.toString(),
-          name: customer.displayName,
-          note: customer.note,
-          isPublicHidden: customer.isPublicHidden,
-        },
-        latestPayment: latestPayment
-          ? {
-              _id: latestPayment._id.toString(),
-              paidDate: latestPayment.paidDate,
-              endDate: latestPayment.endDate,
-              currency: latestPayment.currency,
-              amount: latestPayment.amount,
-              months: latestPayment.months,
-              note: latestPayment.note,
-            }
-          : null,
-        status,
-      };
-    })
-  );
-
+  const latestPaymentsMap = await listLatestPaymentsForAllCustomers();
+  const customersWithStatus = customers.map((customer) => {
+    const latestPayment = latestPaymentsMap.get(customer._id.toString());
+    const status = computeStatus(latestPayment?.endDate || null);
+    statusCounts[status.status]++;
+    return {
+      customer: {
+        _id: customer._id.toString(),
+        name: customer.displayName,
+        note: customer.note,
+        isPublicHidden: customer.isPublicHidden,
+      },
+      latestPayment: latestPayment
+        ? {
+          _id: latestPayment._id.toString(),
+          paidDate: latestPayment.paidDate,
+          endDate: latestPayment.endDate,
+          currency: latestPayment.currency,
+          amount: latestPayment.amount,
+          months: latestPayment.months,
+          note: latestPayment.note,
+        }
+        : null,
+      status,
+    };
+  });
   const today = getTodayDateOnly();
   const currentMonthKey = getMonthBucket(today);
   const startWindow = `${currentMonthKey}-01`;
@@ -80,17 +73,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
     addMonthsDateOnly(startWindow, monthWindowCount),
     -1
   );
-
   const paymentsInWindow = await listPaymentsForRevenueWindow(
     startWindow,
     endWindow
   );
-
   const monthBuckets = Array.from({ length: monthWindowCount }, (_, i) =>
     getMonthBucket(addMonthsDateOnly(startWindow, i))
   );
   const monthlyMap = computeMonthlyTotals(paymentsInWindow, monthBuckets);
-
   const monthlyTotals: MonthlyTotal[] = monthBuckets.map((month) => {
     const totals = monthlyMap.get(month) || { VND: 0, USD: 0, convertedVnd: 0 };
     return {
@@ -100,7 +90,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
       convertedVnd: totals.convertedVnd,
     };
   });
-
   return json({
     totalCustomers,
     statusCounts,
@@ -124,9 +113,7 @@ function StatusCard({
   textClass: string;
 }) {
   return (
-    <div
-      className={`rounded-lg border-2 ${borderClass} ${bgClass} p-6`}
-    >
+    <div className={`rounded-lg border-2 ${borderClass} ${bgClass} p-6`}>
       <div className="flex items-center justify-between">
         <div>
           <p className={`text-sm font-medium ${textClass}`}>{title}</p>
@@ -152,7 +139,6 @@ export default function AdminDashboard() {
     customers,
     searchQuery,
   } = useLoaderData<typeof loader>();
-
   return (
     <div className="space-y-8">
       <div>
@@ -163,7 +149,6 @@ export default function AdminDashboard() {
           Quản lý đăng ký và xem báo cáo doanh thu
         </p>
       </div>
-
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
         <StatusCard
           title="Tổng số thành viên"
@@ -201,7 +186,6 @@ export default function AdminDashboard() {
           textClass="text-red-900"
         />
       </div>
-
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">
@@ -220,7 +204,6 @@ export default function AdminDashboard() {
           showAdminActions={true}
         />
       </div>
-
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">
