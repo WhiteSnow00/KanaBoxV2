@@ -1,6 +1,7 @@
 
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { json, useLoaderData, Link, Form, useSearchParams } from "@remix-run/react";
+import { json, useLoaderData, Link } from "@remix-run/react";
+import { useState } from "react";
 import { listCustomers, countCustomers } from "~/models/customer.server";
 import {
   computeStatus,
@@ -47,10 +48,8 @@ function generateMonthBuckets(startBucket: string, endBucket: string): string[] 
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const url = new URL(request.url);
-  const searchQuery = url.searchParams.get("q") || "";
   const totalCustomers = await countCustomers();
-  const customers = await listCustomers(searchQuery);
+  const customers = await listCustomers();
   const statusCounts = {
     active: 0,
     due: 0,
@@ -114,7 +113,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     statusCounts,
     monthlyTotals,
     customers: customersWithStatus,
-    searchQuery,
   });
 }
 
@@ -156,9 +154,13 @@ export default function AdminDashboard() {
     statusCounts,
     monthlyTotals,
     customers,
-    searchQuery,
   } = useLoaderData<typeof loader>();
-  const [searchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredCustomers = customers.filter((item) =>
+    item.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
@@ -209,26 +211,16 @@ export default function AdminDashboard() {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="text-lg font-medium text-gray-900">
-            Tất cả thành viên ({customers.length})
+            Tất cả thành viên ({filteredCustomers.length})
           </h2>
           <div className="flex gap-2">
-            <Form method="get" className="flex-1 sm:flex-none">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  name="q"
-                  defaultValue={searchQuery}
-                  placeholder="Tìm kiếm..."
-                  className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Tìm
-                </button>
-              </div>
-            </Form>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Tìm kiếm..."
+              className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+            />
             <Link
               to="/826264/customers/new"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
@@ -240,7 +232,7 @@ export default function AdminDashboard() {
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <div className="inline-block min-w-full align-middle px-4 sm:px-0">
             <CustomerTable
-              customers={customers}
+              customers={filteredCustomers}
               basePath="/826264/customers"
               showAdminActions={true}
             />
