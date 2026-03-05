@@ -14,7 +14,7 @@ import {
 import { useState } from "react";
 import { ObjectId } from "mongodb";
 import { getCustomerById, listCustomers } from "~/models/customer.server";
-import { createPayment } from "~/models/payment.server";
+import { createPayment, getLatestPaymentForCustomer } from "~/models/payment.server";
 import {
   calculateRecommendedMonths,
   BASE_PRICE_VND,
@@ -66,6 +66,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const customerId = url.searchParams.get("customerId");
 
   let customer = null;
+  let defaultPaidDate = getTodayDateOnly();
+
   if (customerId && ObjectId.isValid(customerId)) {
     const c = await getCustomerById(customerId);
     if (c) {
@@ -73,6 +75,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
         _id: c._id.toString(),
         name: c.displayName,
       };
+      const latestPayment = await getLatestPaymentForCustomer(customerId);
+      if (latestPayment) {
+        defaultPaidDate = latestPayment.endDate;
+      }
     }
   }
 
@@ -84,7 +90,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       _id: c._id.toString(),
       name: c.displayName,
     })),
-    defaultPaidDate: getTodayDateOnly(),
+    defaultPaidDate,
     basePriceVnd: BASE_PRICE_VND,
     basePriceUsd: BASE_PRICE_USD,
   });
