@@ -1,9 +1,9 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData, useOutlet, Link, Form, redirect } from "@remix-run/react";
 import { ObjectId } from "mongodb";
-import { 
-  getCustomerById, 
-  hideCustomerFromPublic, 
+import {
+  getCustomerById,
+  hideCustomerFromPublic,
   unhideCustomer,
   deleteCustomerWithPayments,
   cancelRenewal,
@@ -143,23 +143,22 @@ export default function AdminCustomerDetail() {
       </div>
 
       <div
-        className={`bg-white shadow rounded-lg overflow-hidden ${
-          latestStatus.status === "none"
+        className={`bg-white shadow rounded-lg overflow-hidden ${latestStatus.status === "none"
             ? ""
             : latestStatus.status === "active"
-            ? "border-l-4 border-l-green-500"
-            : latestStatus.status === "due"
-            ? "border-l-4 border-l-yellow-500"
-            : latestStatus.status === "grace"
-            ? "border-l-4 border-l-orange-500"
-            : "border-l-4 border-l-red-500"
-        }`}
+              ? "border-l-4 border-l-green-500"
+              : latestStatus.status === "due"
+                ? "border-l-4 border-l-yellow-500"
+                : latestStatus.status === "grace"
+                  ? "border-l-4 border-l-orange-500"
+                  : "border-l-4 border-l-red-500"
+          }`}
       >
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                   {customer.name}
                 </h1>
                 {customer.isPublicHidden && (
@@ -177,7 +176,7 @@ export default function AdminCustomerDetail() {
                 <StatusBadge status={latestStatus.status} label={latestStatus.label} />
               </div>
             </div>
-            <div className="flex gap-3 flex-wrap items-center">
+            <div className="flex gap-2 sm:gap-3 flex-wrap items-center">
               {customer.renewalCancelled ? (
                 <Form method="post" className="inline">
                   <input type="hidden" name="intent" value="resumeRenewal" />
@@ -201,7 +200,7 @@ export default function AdminCustomerDetail() {
                   </button>
                 </Form>
               )}
-              
+
               {customer.isPublicHidden ? (
                 <Form method="post" className="inline">
                   <input type="hidden" name="intent" value="unhide" />
@@ -236,8 +235,8 @@ export default function AdminCustomerDetail() {
               >
                 Thêm thanh toán
               </Link>
-              <Form 
-                method="post" 
+              <Form
+                method="post"
                 className="inline"
                 onSubmit={(e) => {
                   if (!confirm("Bạn có chắc muốn xóa thành viên này và toàn bộ thanh toán của họ không? Thao tác này không thể hoàn tác.")) {
@@ -268,7 +267,7 @@ export default function AdminCustomerDetail() {
       </div>
 
       <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">Lịch sử thanh toán</h2>
         </div>
         <div className="p-0">
@@ -285,104 +284,106 @@ export default function AdminCustomerDetail() {
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ngày thanh toán
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ngày hết hạn
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Số tiền
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Số tháng
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Trạng thái
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ghi chú
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Thao tác
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {payments.map((payment, index) => {
-                    const paymentStatus = computeStatus(payment.endDate);
-                    const isLatest = index === 0;
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ngày thanh toán
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ngày hết hạn
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Số tiền
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Số tháng
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Trạng thái
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ghi chú
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thao tác
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {payments.map((payment, index) => {
+                      const paymentStatus = computeStatus(payment.endDate);
+                      const isLatest = index === 0;
 
-                    return (
-                      <tr
-                        key={payment._id}
-                        className={isLatest ? "bg-blue-50" : ""}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {payment.paidDate}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {payment.endDate}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {formatCurrency(payment.amount, payment.currency)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {payment.months}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <StatusBadge
-                              status={paymentStatus.status}
-                              label={paymentStatus.label}
-                            />
-                            {isLatest && (
-                              <span className="text-xs text-blue-600 font-medium">
-                                (hiện tại)
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                          {payment.note || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link
-                              to={`/826264/payments/${payment._id}/edit`}
-                              className="text-blue-600 hover:text-blue-900 font-medium"
-                            >
-                              Sửa
-                            </Link>
-                            <Form 
-                              method="post" 
-                              className="inline"
-                              onSubmit={(e) => {
-                                if (!confirm("Bạn có chắc muốn xóa thanh toán này không?")) {
-                                  e.preventDefault();
-                                }
-                              }}
-                            >
-                              <input type="hidden" name="intent" value="deletePayment" />
-                              <input type="hidden" name="paymentId" value={payment._id} />
-                              <button
-                                type="submit"
-                                className="text-red-600 hover:text-red-900 font-medium"
+                      return (
+                        <tr
+                          key={payment._id}
+                          className={isLatest ? "bg-blue-50" : ""}
+                        >
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {payment.paidDate}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {payment.endDate}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {formatCurrency(payment.amount, payment.currency)}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {payment.months}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <StatusBadge
+                                status={paymentStatus.status}
+                                label={paymentStatus.label}
+                              />
+                              {isLatest && (
+                                <span className="text-xs text-blue-600 font-medium">
+                                  (hiện tại)
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                            {payment.note || "-"}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Link
+                                to={`/826264/payments/${payment._id}/edit`}
+                                className="text-blue-600 hover:text-blue-900 font-medium"
                               >
-                                Xóa
-                              </button>
-                            </Form>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                                Sửa
+                              </Link>
+                              <Form
+                                method="post"
+                                className="inline"
+                                onSubmit={(e) => {
+                                  if (!confirm("Bạn có chắc muốn xóa thanh toán này không?")) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                              >
+                                <input type="hidden" name="intent" value="deletePayment" />
+                                <input type="hidden" name="paymentId" value={payment._id} />
+                                <button
+                                  type="submit"
+                                  className="text-red-600 hover:text-red-900 font-medium"
+                                >
+                                  Xóa
+                                </button>
+                              </Form>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

@@ -4,7 +4,7 @@ import { getTodayDateOnly } from "~/utils/date";
 
 export interface NameHistoryEntry {
   name: string;
-  changedAt: string; // YYYY-MM-DD
+  changedAt: string;
 }
 
 export interface Customer {
@@ -16,7 +16,7 @@ export interface Customer {
   hiddenAt?: Date;
   hiddenReason?: string;
   renewalCancelled?: boolean;
-  cancelledAt?: string; // YYYY-MM-DD
+  cancelledAt?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,12 +39,12 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
   };
 
   const result = await collection.insertOne(customer as Customer);
-  
+
   return {
     _id: result.insertedId,
     ...customer,
-	  } as Customer;
-	}
+  } as Customer;
+}
 
 export async function listCustomers(
   searchQuery?: string,
@@ -54,11 +54,11 @@ export async function listCustomers(
   const collection = db.collection<Customer>("customers");
 
   const filter: Record<string, unknown> = {};
-  
+
   if (options?.publicOnly) {
     filter.isPublicHidden = { $ne: true };
   }
-  
+
   if (searchQuery && searchQuery.trim()) {
     filter.displayName = { $regex: searchQuery.trim(), $options: "i" };
   }
@@ -290,14 +290,14 @@ export async function deleteCustomerWithPayments(customerId: string): Promise<bo
   }
 
   const db = await getDb();
-  
+
   await db.collection("payments").deleteMany({
     customerId: new ObjectId(customerId),
   });
-  
+
   const result = await db.collection<Customer>("customers").deleteOne({
     _id: new ObjectId(customerId),
   });
-  
+
   return result.deletedCount === 1;
 }

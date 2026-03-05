@@ -128,7 +128,7 @@ export default function AdminEditCustomer() {
   const actionData = useActionData<typeof action>();
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <Link
           to={`/826264/customers/${customer._id}`}
@@ -161,9 +161,8 @@ export default function AdminEditCustomer() {
               name="name"
               id="name"
               defaultValue={actionData?.values?.displayName || customer.displayName}
-              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                actionData?.errors?.displayName ? "border-red-300" : ""
-              }`}
+              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.displayName ? "border-red-300" : ""
+                }`}
               placeholder="Tên thành viên"
               maxLength={60}
               required

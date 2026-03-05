@@ -131,30 +131,30 @@ export default function CustomerTable({
   }
 
   return (
-    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+    <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg">
       <table className="min-w-full divide-y divide-gray-300">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               {t.headers.name}
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               {t.headers.status}
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               {t.headers.endDate}
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               {t.headers.latestPayment}
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               {t.headers.months}
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               {t.headers.note}
             </th>
             {!readOnly && (
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 {t.headers.actions}
               </th>
             )}
@@ -166,7 +166,7 @@ export default function CustomerTable({
               key={customer._id}
               className={`${getRowClass(status.status)} hover:opacity-80 transition-opacity`}
             >
-              <td className="px-6 py-4 whitespace-nowrap text-sm">
+              <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
                 {readOnly ? (
                   <span className="font-medium text-gray-900">
                     {customer.name}
@@ -181,10 +181,10 @@ export default function CustomerTable({
                 )}
                 {!readOnly && customer.isPublicHidden && <HiddenBadge />}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm">
+              <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
                 <StatusBadge status={status.status} label={status.label} />
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm">
+              <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
                 {latestPayment ? (
                   <span
                     className={
@@ -199,7 +199,7 @@ export default function CustomerTable({
                   <span className="text-gray-400">-</span>
                 )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm">
+              <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
                 {latestPayment ? (
                   <>
                     {latestPayment.currency === "VND"
@@ -210,14 +210,14 @@ export default function CustomerTable({
                   <span className="text-gray-400">{t.noPayment}</span>
                 )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {latestPayment ? (
                   <>{t.formatMonths(latestPayment.months)}</>
                 ) : (
                   <span className="text-gray-400">-</span>
                 )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {(customer.note || latestPayment?.note) ? (
                   <span
                     className="inline-flex items-center text-gray-500"
@@ -244,7 +244,7 @@ export default function CustomerTable({
                 )}
               </td>
               {!readOnly && (
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-right">
                   <Link
                     to={`${basePath}/${customer._id}`}
                     className="text-blue-600 hover:text-blue-900 font-medium"

@@ -1,6 +1,6 @@
 
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { json, useLoaderData, Link } from "@remix-run/react";
+import { json, useLoaderData, Link, Form, useSearchParams } from "@remix-run/react";
 import { listCustomers, countCustomers } from "~/models/customer.server";
 import {
   computeStatus,
@@ -9,8 +9,7 @@ import {
   listLatestPaymentsForAllCustomers,
 } from "~/models/payment.server";
 import {
-  addDaysDateOnly,
-  addMonthsDateOnly,
+  getRevenueBucketRange,
   getMonthBucket,
   getTodayDateOnly,
 } from "~/utils/date";
@@ -25,6 +24,26 @@ interface MonthlyTotal {
   vnd: number;
   usd: number;
   convertedVnd: number;
+}
+
+function generateMonthBuckets(startBucket: string, endBucket: string): string[] {
+  const buckets: string[] = [];
+  const [startYear, startMonth] = startBucket.split("-").map(Number);
+  const [endYear, endMonth] = endBucket.split("-").map(Number);
+
+  let y = startYear;
+  let m = startMonth;
+
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    buckets.push(`${y}-${String(m).padStart(2, "0")}`);
+    m++;
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+
+  return buckets;
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -65,21 +84,21 @@ export async function loader({ request }: LoaderFunctionArgs) {
       status,
     };
   });
+
+  const FIXED_START_BUCKET = "2026-02";
   const today = getTodayDateOnly();
-  const currentMonthKey = getMonthBucket(today);
-  const startWindow = `${currentMonthKey}-01`;
-  const monthWindowCount = 12;
-  const endWindow = addDaysDateOnly(
-    addMonthsDateOnly(startWindow, monthWindowCount),
-    -1
-  );
+  const currentBucket = getMonthBucket(today);
+
+  const monthBuckets = generateMonthBuckets(FIXED_START_BUCKET, currentBucket);
+
+  const firstRange = getRevenueBucketRange(monthBuckets[0]);
+  const lastRange = getRevenueBucketRange(monthBuckets[monthBuckets.length - 1]);
+
   const paymentsInWindow = await listPaymentsForRevenueWindow(
-    startWindow,
-    endWindow
+    firstRange.start,
+    lastRange.end
   );
-  const monthBuckets = Array.from({ length: monthWindowCount }, (_, i) =>
-    getMonthBucket(addMonthsDateOnly(startWindow, i))
-  );
+
   const monthlyMap = computeMonthlyTotals(paymentsInWindow, monthBuckets);
   const monthlyTotals: MonthlyTotal[] = monthBuckets.map((month) => {
     const totals = monthlyMap.get(month) || { VND: 0, USD: 0, convertedVnd: 0 };
@@ -113,11 +132,11 @@ function StatusCard({
   textClass: string;
 }) {
   return (
-    <div className={`rounded-lg border-2 ${borderClass} ${bgClass} p-6`}>
+    <div className={`rounded-lg border-2 ${borderClass} ${bgClass} p-4 sm:p-6`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className={`text-sm font-medium ${textClass}`}>{title}</p>
-          <p className={`mt-1 text-3xl font-semibold ${textClass}`}>
+          <p className={`text-xs sm:text-sm font-medium ${textClass}`}>{title}</p>
+          <p className={`mt-1 text-2xl sm:text-3xl font-semibold ${textClass}`}>
             {count.toLocaleString()}
           </p>
         </div>
@@ -139,17 +158,18 @@ export default function AdminDashboard() {
     customers,
     searchQuery,
   } = useLoaderData<typeof loader>();
+  const [searchParams] = useSearchParams();
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
           Bảng điều khiển (Quản trị)
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           Quản lý đăng ký và xem báo cáo doanh thu
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5">
         <StatusCard
           title="Tổng số thành viên"
           count={totalCustomers}
@@ -187,74 +207,101 @@ export default function AdminDashboard() {
         />
       </div>
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="text-lg font-medium text-gray-900">
             Tất cả thành viên ({customers.length})
           </h2>
-          <Link
-            to="/826264/customers/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Thêm thành viên
-          </Link>
+          <div className="flex gap-2">
+            <Form method="get" className="flex-1 sm:flex-none">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  name="q"
+                  defaultValue={searchQuery}
+                  placeholder="Tìm kiếm..."
+                  className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  Tìm
+                </button>
+              </div>
+            </Form>
+            <Link
+              to="/826264/customers/new"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
+            >
+              Thêm thành viên
+            </Link>
+          </div>
         </div>
-        <CustomerTable
-          customers={customers}
-          basePath="/826264/customers"
-          showAdminActions={true}
-        />
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+            <CustomerTable
+              customers={customers}
+              basePath="/826264/customers"
+              showAdminActions={true}
+            />
+          </div>
+        </div>
       </div>
       <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">
             Doanh thu theo tháng
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Tính toàn bộ số tiền vào tháng thanh toán (paidDate)
+            Doanh thu tính theo chu kỳ ngày 6 đến ngày 5 tháng sau
           </p>
         </div>
-        <div className="p-6">
-          <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-300">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tháng
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tổng VND
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tổng USD
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tổng VND (Quy đổi)
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {monthlyTotals.map((month) => (
-                  <tr key={month.month}>
-                    <td className="px-6 py-4 text-sm font-medium">
-                      {formatMonth(month.month)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-right">
-                      {month.vnd > 0
-                        ? `${month.vnd.toLocaleString("vi-VN")} ₫`
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-right">
-                      {month.usd > 0 ? `$${month.usd.toFixed(2)}` : "-"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-right font-medium text-blue-700">
-                      {month.convertedVnd > 0
-                        ? `${month.convertedVnd.toLocaleString("vi-VN")} ₫`
-                        : "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="p-4 sm:p-6">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tháng
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tổng VND
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tổng USD
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tổng VND (Quy đổi)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {monthlyTotals.map((month) => (
+                      <tr key={month.month}>
+                        <td className="px-4 sm:px-6 py-4 text-sm font-medium whitespace-nowrap">
+                          {formatMonth(month.month)}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 text-sm text-right whitespace-nowrap">
+                          {month.vnd > 0
+                            ? `${month.vnd.toLocaleString("vi-VN")} ₫`
+                            : "-"}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 text-sm text-right whitespace-nowrap">
+                          {month.usd > 0 ? `$${month.usd.toFixed(2)}` : "-"}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 text-sm text-right font-medium text-blue-700 whitespace-nowrap">
+                          {month.convertedVnd > 0
+                            ? `${month.convertedVnd.toLocaleString("vi-VN")} ₫`
+                            : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>

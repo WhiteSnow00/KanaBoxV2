@@ -3,6 +3,7 @@ import { getDb } from "~/utils/db.server";
 import {
   addMonthsDateOnly,
   getMonthBucket,
+  getRevenueBucketRange,
 } from "~/utils/date";
 import {
   DUE_SOON_DAYS,
@@ -33,11 +34,11 @@ export {
 export interface Payment {
   _id: ObjectId;
   customerId: ObjectId;
-  paidDate: string; // YYYY-MM-DD
+  paidDate: string;
   currency: Currency;
   amount: number;
   months: number;
-  endDate: string; // YYYY-MM-DD (computed from paidDate + months*30)
+  endDate: string;
   note?: string;
   createdAt: Date;
 }
@@ -164,7 +165,7 @@ export async function listPaymentsForRevenueWindow(
 }
 
 export interface MonthlyAllocation {
-  monthBucket: string; // YYYY-MM
+  monthBucket: string;
   amount: number;
   currency: Currency;
 }
@@ -175,33 +176,33 @@ export function allocatePaymentToMonths(
   const allocations: MonthlyAllocation[] = [];
   const { amount, months, currency, paidDate } = payment;
 
-  const baseAmount = currency === "VND" 
+  const baseAmount = currency === "VND"
     ? Math.floor(amount / months)
     : Math.floor((amount / months) * 100) / 100;
-  
+
   const totalBase = currency === "VND"
     ? baseAmount * months
     : Math.round(baseAmount * months * 100) / 100;
-  
+
   const remainder = currency === "VND"
     ? amount - totalBase
     : Math.round((amount - totalBase) * 100) / 100;
-  
+
   const remainderPerMonth = currency === "VND"
     ? 1
     : 0.01;
-  
+
   const monthsWithExtra = currency === "VND"
-	    ? remainder
-	    : Math.round(remainder / 0.01);
+    ? remainder
+    : Math.round(remainder / 0.01);
 
-	  for (let i = 0; i < months; i++) {
-	    const periodStart = addMonthsDateOnly(paidDate, i);
-	    const monthBucket = getMonthBucket(periodStart);
+  for (let i = 0; i < months; i++) {
+    const periodStart = addMonthsDateOnly(paidDate, i);
+    const monthBucket = getMonthBucket(periodStart);
 
-	    const monthAmount = currency === "VND"
-	      ? baseAmount + (i < monthsWithExtra ? remainderPerMonth : 0)
-	      : Math.round((baseAmount + (i < monthsWithExtra ? remainderPerMonth : 0)) * 100) / 100;
+    const monthAmount = currency === "VND"
+      ? baseAmount + (i < monthsWithExtra ? remainderPerMonth : 0)
+      : Math.round((baseAmount + (i < monthsWithExtra ? remainderPerMonth : 0)) * 100) / 100;
 
     allocations.push({
       monthBucket,
@@ -210,8 +211,8 @@ export function allocatePaymentToMonths(
     });
   }
 
-	  return allocations;
-	}
+  return allocations;
+}
 
 export async function getPaymentById(id: string): Promise<Payment | null> {
   if (!ObjectId.isValid(id)) {
@@ -290,16 +291,18 @@ export function computeMonthlyTotals(
     totals.set(bucket, { VND: 0, USD: 0, convertedVnd: 0 });
   }
 
-  // Revenue reporting: count the full payment amount in the paid month.
   for (const payment of payments) {
-    const bucketKey = getMonthBucket(payment.paidDate);
-    const current = totals.get(bucketKey);
-    if (!current) continue;
-
-    if (payment.currency === "VND") {
-      current.VND += Math.round(payment.amount);
-    } else {
-      current.USD = Math.round((current.USD + payment.amount) * 100) / 100;
+    for (const bucket of monthBuckets) {
+      const { start, end } = getRevenueBucketRange(bucket);
+      if (payment.paidDate >= start && payment.paidDate <= end) {
+        const current = totals.get(bucket)!;
+        if (payment.currency === "VND") {
+          current.VND += Math.round(payment.amount);
+        } else {
+          current.USD = Math.round((current.USD + payment.amount) * 100) / 100;
+        }
+        break;
+      }
     }
   }
 

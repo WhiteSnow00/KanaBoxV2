@@ -43,8 +43,8 @@ function PublicHeader() {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center">
-          <h1 className="text-xl font-bold text-blue-600">
+        <div className="flex h-14 sm:h-16 items-center">
+          <h1 className="text-lg sm:text-xl font-bold text-blue-600">
             Kana Box V2
           </h1>
         </div>
@@ -57,7 +57,7 @@ export default function App() {
   return (
     <Document>
       <PublicHeader />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <Outlet />
       </main>
     </Document>
@@ -87,7 +87,7 @@ export function ErrorBoundary() {
   return (
     <Document title="Lỗi - Kana Box V2">
       <PublicHeader />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="rounded-md bg-red-50 p-4">
           <div className="flex">
             <div className="flex-shrink-0">

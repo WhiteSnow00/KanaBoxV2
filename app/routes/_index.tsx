@@ -1,4 +1,3 @@
-// app/routes/_index.tsx
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
 import { listCustomers } from "~/models/customer.server";
@@ -70,10 +69,10 @@ export default function PublicHome() {
   const { customers, lang } = useLoaderData<typeof loader>();
   const strings = getPublicStrings(lang);
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
             {strings.membersHeading}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -87,7 +86,7 @@ export default function PublicHome() {
           optionEn={strings.languageOptions.en}
         />
       </div>
-      <div className="flex flex-wrap gap-3 text-sm">
+      <div className="flex flex-wrap gap-2 sm:gap-3 text-sm">
         <span className="font-medium text-gray-700">
           {strings.statusLegendLabel}
         </span>
@@ -108,13 +107,17 @@ export default function PublicHome() {
           {strings.statusLabels.expired}
         </span>
       </div>
-      <CustomerTable
-        customers={customers}
-        basePath="/customers"
-        showAdminActions={false}
-        readOnly={true}
-        i18n={strings.customerTable}
-      />
+      <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+          <CustomerTable
+            customers={customers}
+            basePath="/customers"
+            showAdminActions={false}
+            readOnly={true}
+            i18n={strings.customerTable}
+          />
+        </div>
+      </div>
     </div>
   );
 }

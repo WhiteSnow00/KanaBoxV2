@@ -192,7 +192,7 @@ export default function AdminAddCustomer() {
   );
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <Link
           to="/826264"
@@ -228,9 +228,8 @@ export default function AdminAddCustomer() {
               name="name"
               id="name"
               defaultValue={actionData?.values?.displayName || ""}
-              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                actionData?.errors?.displayName ? "border-red-300" : ""
-              }`}
+              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.displayName ? "border-red-300" : ""
+                }`}
               placeholder="Tên thành viên"
               maxLength={60}
               required
@@ -265,7 +264,7 @@ export default function AdminAddCustomer() {
 
           <div className="border-t border-gray-200 pt-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Thanh toán ban đầu
+              Thanh toán ban đầu
             </h2>
 
             <div className="mb-4">
@@ -351,9 +350,8 @@ export default function AdminAddCustomer() {
                         setMonths(calculateRecommendedMonths(val, currency));
                       }
                     }}
-                    className={`block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                      actionData?.errors?.amount ? "border-red-300" : ""
-                    }`}
+                    className={`block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.amount ? "border-red-300" : ""
+                      }`}
                     placeholder={currency === "VND" ? "50000" : "2.00"}
                     required
                   />
@@ -390,9 +388,8 @@ export default function AdminAddCustomer() {
                   setMonths(val);
                   setMonthsManuallyEdited(true);
                 }}
-                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                  actionData?.errors?.months ? "border-red-300" : ""
-                }`}
+                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.months ? "border-red-300" : ""
+                  }`}
                 required
               />
               <p className="mt-1 text-sm text-gray-600">
@@ -412,9 +409,8 @@ export default function AdminAddCustomer() {
                 name="paidDate"
                 id="paidDate"
                 defaultValue={actionData?.values?.paidDate || getTodayDateOnly()}
-                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                  actionData?.errors?.paidDate ? "border-red-300" : ""
-                }`}
+                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.paidDate ? "border-red-300" : ""
+                  }`}
                 required
               />
               <p className="mt-1 text-xs text-gray-500">
