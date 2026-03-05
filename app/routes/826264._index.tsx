@@ -122,24 +122,29 @@ function StatusCard({
   bgClass,
   borderClass,
   textClass,
+  onClick,
+  isSelected,
 }: {
   title: string;
   count: number;
   bgClass: string;
   borderClass: string;
   textClass: string;
+  onClick?: () => void;
+  isSelected?: boolean;
 }) {
   return (
-    <div className={`rounded-lg border-2 ${borderClass} ${bgClass} p-4 sm:p-6`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className={`text-xs sm:text-sm font-medium ${textClass}`}>{title}</p>
-          <p className={`mt-1 text-2xl sm:text-3xl font-semibold ${textClass}`}>
-            {count.toLocaleString()}
-          </p>
-        </div>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg border-2 ${borderClass} ${bgClass} p-4 sm:p-6 text-left w-full transition-all cursor-pointer ${isSelected ? "ring-2 ring-offset-2 ring-blue-500 scale-[1.02]" : "hover:opacity-80"
+        }`}
+    >
+      <p className={`text-xs sm:text-sm font-medium ${textClass}`}>{title}</p>
+      <p className={`mt-1 text-2xl sm:text-3xl font-semibold ${textClass}`}>
+        {count.toLocaleString()}
+      </p>
+    </button>
   );
 }
 
@@ -156,10 +161,13 @@ export default function AdminDashboard() {
     customers,
   } = useLoaderData<typeof loader>();
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  const filteredCustomers = customers.filter((item) =>
-    item.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers.filter((item) => {
+    const matchesSearch = item.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === null || item.status.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -178,6 +186,8 @@ export default function AdminDashboard() {
           bgClass="bg-gray-100"
           borderClass="border-gray-400"
           textClass="text-gray-900"
+          onClick={() => setStatusFilter(null)}
+          isSelected={statusFilter === null}
         />
         <StatusCard
           title="Còn hạn"
@@ -185,6 +195,8 @@ export default function AdminDashboard() {
           bgClass="bg-green-100"
           borderClass="border-green-600"
           textClass="text-green-900"
+          onClick={() => setStatusFilter(statusFilter === "active" ? null : "active")}
+          isSelected={statusFilter === "active"}
         />
         <StatusCard
           title="Sắp đến hạn"
@@ -192,6 +204,8 @@ export default function AdminDashboard() {
           bgClass="bg-yellow-100"
           borderClass="border-yellow-600"
           textClass="text-yellow-900"
+          onClick={() => setStatusFilter(statusFilter === "due" ? null : "due")}
+          isSelected={statusFilter === "due"}
         />
         <StatusCard
           title="Quá hạn (cao su)"
@@ -199,6 +213,8 @@ export default function AdminDashboard() {
           bgClass="bg-orange-100"
           borderClass="border-orange-600"
           textClass="text-orange-900"
+          onClick={() => setStatusFilter(statusFilter === "grace" ? null : "grace")}
+          isSelected={statusFilter === "grace"}
         />
         <StatusCard
           title="Hết hạn"
@@ -206,6 +222,8 @@ export default function AdminDashboard() {
           bgClass="bg-red-100"
           borderClass="border-red-600"
           textClass="text-red-900"
+          onClick={() => setStatusFilter(statusFilter === "expired" ? null : "expired")}
+          isSelected={statusFilter === "expired"}
         />
       </div>
       <div>
