@@ -1,7 +1,6 @@
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { redirect, json, useActionData, Form, Link } from "@remix-run/react";
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
 import {
   createCustomer,
   findArchivedByName,
@@ -21,9 +20,16 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
-import { cn } from "~/lib/utils";
-
-const VND_AMOUNT_PRESETS = [50000, 100000, 150000, 200000, 250000, 300000] as const;
+import {
+  Breadcrumb,
+  FormErrorBanner,
+  FormMessage,
+  FormActions,
+  CurrencySelect,
+  AmountPresetChips,
+  CurrencyAmountInput,
+  MonthsRecommendation,
+} from "~/components/shared";
 
 export const meta: MetaFunction = () => [
   { title: "Thêm thành viên - Quản trị - Kana Box V2" },
@@ -199,7 +205,7 @@ export default function AdminAddCustomer() {
     if (Number.isFinite(parsed) && parsed > 0) {
       return parsed;
     }
-    return initialCurrency === "USD" ? BASE_PRICE_USD : VND_AMOUNT_PRESETS[0];
+    return initialCurrency === "USD" ? BASE_PRICE_USD : 50000;
   });
   const [monthsManuallyEdited, setMonthsManuallyEdited] = useState(false);
 
@@ -211,16 +217,19 @@ export default function AdminAddCustomer() {
     ) || 1
   );
 
+  const handleAmountPreset = (preset: number) => {
+    setAmount(preset);
+    if (!monthsManuallyEdited) {
+      setMonths(calculateRecommendedMonths(preset, currency));
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-2 text-sm">
-        <Link to="/826264" className="text-zinc-500 hover:text-zinc-700 transition-colors flex items-center gap-1">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Bảng điều khiển
-        </Link>
-        <span className="text-zinc-300">/</span>
-        <span className="text-zinc-900 font-medium">Thêm thành viên</span>
-      </div>
+      <Breadcrumb items={[
+        { label: "Bảng điều khiển", to: "/826264" },
+        { label: "Thêm thành viên" },
+      ]} />
 
       <Card>
         <CardHeader>
@@ -230,9 +239,7 @@ export default function AdminAddCustomer() {
         <CardContent>
           <Form method="post" className="space-y-5">
             {actionData?.errors?.form && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-                <p className="text-sm text-red-700">{actionData.errors.form}</p>
-              </div>
+              <FormErrorBanner message={actionData.errors.form} />
             )}
 
             <div className="space-y-4">
@@ -250,11 +257,10 @@ export default function AdminAddCustomer() {
                   maxLength={60}
                   required
                 />
-                {actionData?.errors?.displayName ? (
-                  <p className="text-sm text-red-600">{actionData.errors.displayName}</p>
-                ) : (
-                  <p className="text-xs text-zinc-400">Phải duy nhất. 1–60 ký tự.</p>
-                )}
+                <FormMessage
+                  error={actionData?.errors?.displayName}
+                  hint={actionData?.errors?.displayName ? undefined : "Phải duy nhất. 1–60 ký tự."}
+                />
               </div>
 
               <div className="space-y-2">
@@ -278,20 +284,13 @@ export default function AdminAddCustomer() {
                 <Label htmlFor="currency">
                   Tiền tệ <span className="text-red-500">*</span>
                 </Label>
-                <select
+                <CurrencySelect
                   name="currency"
                   id="currency"
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value as "VND" | "USD")}
-                  className="flex h-9 w-full rounded-lg border border-zinc-300 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
-                  required
-                >
-                  <option value="VND">VND (₫)</option>
-                  <option value="USD">USD ($)</option>
-                </select>
-                <p className="text-xs text-zinc-400">
-                  Giá cơ bản: {BASE_PRICE_VND.toLocaleString("vi-VN")} ₫/tháng hoặc ${BASE_PRICE_USD}/tháng
-                </p>
+                  onChange={setCurrency}
+                />
+                <FormMessage hint={`Giá cơ bản: ${BASE_PRICE_VND.toLocaleString("vi-VN")} ₫/tháng hoặc $${BASE_PRICE_USD}/tháng`} />
               </div>
 
               <div className="space-y-2">
@@ -299,57 +298,23 @@ export default function AdminAddCustomer() {
                   Số tiền <span className="text-red-500">*</span>
                 </Label>
                 {currency === "VND" && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {VND_AMOUNT_PRESETS.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => {
-                          setAmount(preset);
-                          if (!monthsManuallyEdited) {
-                            setMonths(calculateRecommendedMonths(preset, currency));
-                          }
-                        }}
-                        className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
-                          Math.round(amount) === preset
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-300"
-                            : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
-                        )}
-                      >
-                        {(preset / 1000)}k
-                      </button>
-                    ))}
-                  </div>
+                  <AmountPresetChips currentAmount={amount} onSelect={handleAmountPreset} />
                 )}
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-zinc-400 text-sm">
-                      {currency === "VND" ? "₫" : "$"}
-                    </span>
-                  </div>
-                  <Input
-                    type="number"
-                    name="amount"
-                    id="amount"
-                    min="1"
-                    step={currency === "VND" ? "1" : "0.01"}
-                    value={amount || ""}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
-                      setAmount(val);
-                      if (!monthsManuallyEdited) {
-                        setMonths(calculateRecommendedMonths(val, currency));
-                      }
-                    }}
-                    className={cn("pl-7", actionData?.errors?.amount && "border-red-300 focus-visible:ring-red-500")}
-                    placeholder={currency === "VND" ? "50000" : "2.00"}
-                    required
-                  />
-                </div>
-                {actionData?.errors?.amount && (
-                  <p className="text-sm text-red-600">{actionData.errors.amount}</p>
-                )}
+                <CurrencyAmountInput
+                  currency={currency}
+                  name="amount"
+                  id="amount"
+                  value={amount || ""}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setAmount(val);
+                    if (!monthsManuallyEdited) {
+                      setMonths(calculateRecommendedMonths(val, currency));
+                    }
+                  }}
+                  error={!!actionData?.errors?.amount}
+                />
+                <FormMessage error={actionData?.errors?.amount} />
               </div>
 
               <div className="space-y-2">
@@ -371,12 +336,8 @@ export default function AdminAddCustomer() {
                   className={actionData?.errors?.months ? "border-red-300 focus-visible:ring-red-500" : ""}
                   required
                 />
-                <p className="text-xs text-zinc-500">
-                  Gợi ý: <span className="font-medium text-indigo-600">{recommendedMonths}</span> tháng (theo số tiền)
-                </p>
-                {actionData?.errors?.months && (
-                  <p className="text-sm text-red-600">{actionData.errors.months}</p>
-                )}
+                <MonthsRecommendation months={recommendedMonths} />
+                <FormMessage error={actionData?.errors?.months} />
               </div>
 
               <div className="space-y-2">
@@ -391,12 +352,10 @@ export default function AdminAddCustomer() {
                   className={actionData?.errors?.paidDate ? "border-red-300 focus-visible:ring-red-500" : ""}
                   required
                 />
-                <p className="text-xs text-zinc-400">
-                  Hết hạn = ngày thanh toán + số tháng (theo lịch)
-                </p>
-                {actionData?.errors?.paidDate && (
-                  <p className="text-sm text-red-600">{actionData.errors.paidDate}</p>
-                )}
+                <FormMessage
+                  error={actionData?.errors?.paidDate}
+                  hint={actionData?.errors?.paidDate ? undefined : "Hết hạn = ngày thanh toán + số tháng (theo lịch)"}
+                />
               </div>
 
               <div className="space-y-2">
@@ -413,12 +372,12 @@ export default function AdminAddCustomer() {
 
             <Separator />
 
-            <div className="flex items-center justify-end gap-3">
+            <FormActions>
               <Button variant="outline" asChild>
                 <Link to="/826264">Hủy</Link>
               </Button>
               <Button type="submit">Tạo thành viên và thanh toán</Button>
-            </div>
+            </FormActions>
           </Form>
         </CardContent>
       </Card>

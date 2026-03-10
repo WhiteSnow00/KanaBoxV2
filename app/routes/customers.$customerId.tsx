@@ -11,6 +11,21 @@ import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import { CalendarDays, CreditCard, Clock, StickyNote, FileX } from "lucide-react";
 import { cn } from "~/lib/utils";
+import {
+  formatCurrency,
+  statusAccent,
+  NoteBlock,
+  EmptyState,
+  InfoItem,
+} from "~/components/shared";
+
+const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
+  active: "active",
+  due: "due",
+  grace: "grace",
+  expired: "expired",
+  none: "none",
+};
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
   {
@@ -62,29 +77,6 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   });
 }
 
-const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
-  active: "active",
-  due: "due",
-  grace: "grace",
-  expired: "expired",
-  none: "none",
-};
-
-const statusAccent: Record<string, string> = {
-  active: "border-l-emerald-400",
-  due: "border-l-amber-400",
-  grace: "border-l-orange-400",
-  expired: "border-l-red-400",
-  none: "border-l-zinc-300",
-};
-
-function formatCurrency(amount: number, currency: string): string {
-  if (currency === "VND") {
-    return `${amount.toLocaleString("vi-VN")} ₫`;
-  }
-  return `$${amount.toFixed(2)}`;
-}
-
 export default function PublicCustomerDetail() {
   const { customer, latestPayment, status, lang } = useLoaderData<typeof loader>();
   const strings = getPublicStrings(lang);
@@ -113,13 +105,7 @@ export default function PublicCustomerDetail() {
         </CardHeader>
         {customer.note && (
           <CardContent className="pb-4">
-            <div className="rounded-lg bg-zinc-50 p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <StickyNote className="h-3.5 w-3.5 text-zinc-400" />
-                <span className="text-xs font-medium text-zinc-500">{strings.customerDetail.note}</span>
-              </div>
-              <p className="text-sm text-zinc-700 whitespace-pre-wrap">{customer.note}</p>
-            </div>
+            <NoteBlock icon={StickyNote} label={strings.customerDetail.note} text={customer.note} />
           </CardContent>
         )}
       </Card>
@@ -131,73 +117,40 @@ export default function PublicCustomerDetail() {
         <CardContent>
           {latestPayment ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                  <CalendarDays className="h-4 w-4 text-zinc-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-zinc-400">{strings.customerDetail.currentPeriodEnds}</p>
-                  <p className={cn(
-                    "mt-0.5 text-base font-semibold tabular-nums",
-                    status.status === "expired" ? "text-red-600" : "text-zinc-900"
-                  )}>
-                    {latestPayment.endDate}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                  <CreditCard className="h-4 w-4 text-zinc-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-zinc-400">{strings.customerDetail.latestPayment}</p>
-                  <p className="mt-0.5 text-base font-semibold text-zinc-900 tabular-nums">
-                    {formatCurrency(latestPayment.amount, latestPayment.currency)}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                  <CalendarDays className="h-4 w-4 text-zinc-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-zinc-400">{strings.customerDetail.paidDate}</p>
-                  <p className="mt-0.5 text-sm text-zinc-900 tabular-nums">{latestPayment.paidDate}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                  <Clock className="h-4 w-4 text-zinc-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-zinc-400">{strings.customerDetail.months}</p>
-                  <p className="mt-0.5 text-sm text-zinc-900">
-                    {strings.customerTable.formatMonths(latestPayment.months)}
-                  </p>
-                </div>
-              </div>
+              <InfoItem icon={CalendarDays} label={strings.customerDetail.currentPeriodEnds}>
+                <p className={cn(
+                  "mt-0.5 text-base font-semibold tabular-nums",
+                  status.status === "expired" ? "text-red-600" : "text-zinc-900"
+                )}>
+                  {latestPayment.endDate}
+                </p>
+              </InfoItem>
+              <InfoItem icon={CreditCard} label={strings.customerDetail.latestPayment}>
+                <p className="mt-0.5 text-base font-semibold text-zinc-900 tabular-nums">
+                  {formatCurrency(latestPayment.amount, latestPayment.currency)}
+                </p>
+              </InfoItem>
+              <InfoItem icon={CalendarDays} label={strings.customerDetail.paidDate}>
+                <p className="mt-0.5 text-sm text-zinc-900 tabular-nums">{latestPayment.paidDate}</p>
+              </InfoItem>
+              <InfoItem icon={Clock} label={strings.customerDetail.months}>
+                <p className="mt-0.5 text-sm text-zinc-900">
+                  {strings.customerTable.formatMonths(latestPayment.months)}
+                </p>
+              </InfoItem>
               {latestPayment.note && (
                 <>
                   <Separator className="sm:col-span-2" />
-                  <div className="sm:col-span-2 flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                      <StickyNote className="h-4 w-4 text-zinc-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-zinc-400">{strings.customerDetail.note}</p>
+                  <div className="sm:col-span-2">
+                    <InfoItem icon={StickyNote} label={strings.customerDetail.note}>
                       <p className="mt-0.5 text-sm text-zinc-700">{latestPayment.note}</p>
-                    </div>
+                    </InfoItem>
                   </div>
                 </>
               )}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 mb-3">
-                <FileX className="h-5 w-5 text-zinc-400" />
-              </div>
-              <p className="text-sm text-zinc-500">{strings.customerDetail.noPaymentHistory}</p>
-            </div>
+            <EmptyState icon={FileX} message={strings.customerDetail.noPaymentHistory} />
           )}
         </CardContent>
       </Card>

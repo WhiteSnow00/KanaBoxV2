@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ObjectId } from "mongodb";
 import {
   Users, CheckCircle, Clock, AlertTriangle, XCircle,
-  Search, UserPlus, TrendingUp,
+  UserPlus, TrendingUp,
 } from "lucide-react";
 import { countCustomers, listCustomers, archiveCustomer } from "~/models/customer.server";
 import {
@@ -17,8 +17,7 @@ import { getTodayDateOnly, getMonthBucket, getRevenueBucketRange } from "~/utils
 import CustomerTable from "~/components/CustomerTable";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { cn } from "~/lib/utils";
+import { PageHeader, SearchField, StatCard } from "~/components/shared";
 
 export const meta: MetaFunction = () => [
   { title: "Bảng điều khiển - Quản trị - Kana Box V2" },
@@ -167,49 +166,36 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Bảng điều khiển</h1>
-        <p className="mt-1 text-sm text-zinc-500">Quản lý đăng ký và xem báo cáo doanh thu</p>
-      </div>
+      <PageHeader
+        title="Bảng điều khiển"
+        description="Quản lý đăng ký và xem báo cáo doanh thu"
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <button
-          type="button"
+        <StatCard
+          icon={Users}
+          label="Tổng thành viên"
+          count={totalCustomers}
+          color="text-indigo-500"
+          bg="bg-white"
+          border={statusFilter === null ? "border-indigo-300" : "border-zinc-200"}
+          ring="ring-indigo-200"
+          isSelected={statusFilter === null}
           onClick={() => setStatusFilter(null)}
-          className={cn(
-            "rounded-xl border bg-white p-4 text-left transition-all",
-            statusFilter === null
-              ? "border-indigo-300 ring-2 ring-indigo-200 shadow-sm"
-              : "border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
-          )}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="h-4 w-4 text-indigo-500" />
-            <span className="text-xs font-medium text-zinc-500">Tổng thành viên</span>
-          </div>
-          <p className="text-2xl font-semibold text-zinc-900 tabular-nums">{totalCustomers}</p>
-        </button>
-        {statusCards.map(({ key, label, icon: Icon, color, bg, border, ring }) => (
-          <button
+        />
+        {statusCards.map(({ key, label, icon, color, bg, border, ring }) => (
+          <StatCard
             key={key}
-            type="button"
+            icon={icon}
+            label={label}
+            count={statusCounts[key]}
+            color={color}
+            bg={bg}
+            border={border}
+            ring={ring}
+            isSelected={statusFilter === key}
             onClick={() => setStatusFilter(statusFilter === key ? null : key)}
-            className={cn(
-              "rounded-xl border p-4 text-left transition-all",
-              bg,
-              statusFilter === key
-                ? `${border} ring-2 ${ring} shadow-sm`
-                : `${border} hover:shadow-sm`
-            )}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className={cn("h-4 w-4", color)} />
-              <span className={cn("text-xs font-medium", color)}>{label}</span>
-            </div>
-            <p className={cn("text-2xl font-semibold tabular-nums", color)}>
-              {statusCounts[key]}
-            </p>
-          </button>
+          />
         ))}
       </div>
 
@@ -220,16 +206,12 @@ export default function AdminDashboard() {
             <span className="ml-2 text-sm font-normal text-zinc-400">({filteredCustomers.length})</span>
           </h2>
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm kiếm..."
-                className="pl-9 w-full sm:w-48"
-              />
-            </div>
+            <SearchField
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Tìm kiếm..."
+              className="w-full sm:w-48"
+            />
             <Button asChild>
               <Link to="/826264/customers/new">
                 <UserPlus className="h-4 w-4 mr-2" />

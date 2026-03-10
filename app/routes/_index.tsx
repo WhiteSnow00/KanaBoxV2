@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
 import { useState, useRef, useEffect } from "react";
-import { Search, Users, CheckCircle, Clock, AlertTriangle, XCircle } from "lucide-react";
+import { Users, CheckCircle, Clock, AlertTriangle, XCircle } from "lucide-react";
 import { listCustomers } from "~/models/customer.server";
 import {
   computeStatus,
@@ -11,8 +11,7 @@ import { getTodayDateOnly } from "~/utils/date";
 import CustomerTable from "~/components/CustomerTable";
 import PublicLanguageSelect from "~/components/PublicLanguageSelect";
 import { getPublicStrings, normalizePublicLang } from "~/i18n/public";
-import { cn } from "~/lib/utils";
-import { Input } from "~/components/ui/input";
+import { PageHeader, SearchField, StatCard } from "~/components/shared";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   const lang = data?.lang === "en" ? "en" : "vi";
@@ -117,77 +116,53 @@ export default function PublicHome() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            {strings.membersHeading}
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {strings.membersCount(filteredCustomers.length)}
-          </p>
-        </div>
+      <PageHeader
+        title={strings.membersHeading}
+        description={strings.membersCount(filteredCustomers.length)}
+      >
         <PublicLanguageSelect
           lang={lang}
           label={strings.languageLabel}
           optionVi={strings.languageOptions.vi}
           optionEn={strings.languageOptions.en}
         />
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <button
-          type="button"
+        <StatCard
+          icon={Users}
+          label={strings.membersHeading}
+          count={totalCount}
+          color="text-indigo-500"
+          bg="bg-white"
+          border={statusFilter === null ? "border-indigo-300" : "border-zinc-200"}
+          ring="ring-indigo-200"
+          isSelected={statusFilter === null}
           onClick={() => setStatusFilter(null)}
-          className={cn(
-            "group rounded-xl border bg-white p-4 text-left transition-all",
-            statusFilter === null
-              ? "border-indigo-300 ring-2 ring-indigo-200 shadow-sm"
-              : "border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
-          )}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="h-4 w-4 text-indigo-500" />
-            <span className="text-xs font-medium text-zinc-500">{strings.membersHeading}</span>
-          </div>
-          <p className="text-2xl font-semibold text-zinc-900 tabular-nums">{totalCount}</p>
-        </button>
-        {statusCardConfig.map(({ key, icon: Icon, color, bg, border, ring }) => (
-          <button
+        />
+        {statusCardConfig.map(({ key, icon, color, bg, border, ring }) => (
+          <StatCard
             key={key}
-            type="button"
+            icon={icon}
+            label={strings.statusLabels[key]}
+            count={statusCounts[key]}
+            color={color}
+            bg={bg}
+            border={border}
+            ring={ring}
+            isSelected={statusFilter === key}
             onClick={() => setStatusFilter(statusFilter === key ? null : key)}
-            className={cn(
-              "group rounded-xl border p-4 text-left transition-all",
-              bg,
-              statusFilter === key
-                ? `${border} ring-2 ${ring} shadow-sm`
-                : `${border} hover:shadow-sm`
-            )}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className={cn("h-4 w-4", color)} />
-              <span className={cn("text-xs font-medium", color)}>
-                {strings.statusLabels[key]}
-              </span>
-            </div>
-            <p className={cn("text-2xl font-semibold tabular-nums", color)}>
-              {statusCounts[key]}
-            </p>
-          </button>
+          />
         ))}
       </div>
 
-      <div className="relative max-w-xs">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-        <Input
-          ref={searchInputRef}
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={lang === "en" ? "Search... (Ctrl+K)" : "Tìm kiếm... (Ctrl+K)"}
-          className="pl-9"
-        />
-      </div>
+      <SearchField
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder={lang === "en" ? "Search... (Ctrl+K)" : "Tìm kiếm... (Ctrl+K)"}
+        className="max-w-xs"
+        inputRef={searchInputRef}
+      />
 
       <CustomerTable
         customers={filteredCustomers}

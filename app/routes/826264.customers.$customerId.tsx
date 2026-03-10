@@ -3,8 +3,8 @@ import { json, useLoaderData, useOutlet, Link, redirect, Form } from "@remix-run
 import { useState } from "react";
 import { ObjectId } from "mongodb";
 import {
-  ArrowLeft, Pencil, CreditCard, Archive, Eye, EyeOff,
-  CalendarDays, Clock, RefreshCw, XCircle, StickyNote, Ban,
+  Pencil, CreditCard, Archive, Eye, EyeOff,
+  RefreshCw, XCircle, StickyNote, Ban,
 } from "lucide-react";
 import {
   getCustomerById,
@@ -19,7 +19,6 @@ import { computeStatus } from "~/models/subscriptionStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +31,21 @@ import {
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
 import { cn } from "~/lib/utils";
+import {
+  Breadcrumb,
+  EmptyState,
+  NoteBlock,
+  formatCurrency,
+  statusAccent,
+} from "~/components/shared";
 
+const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
+  active: "active",
+  due: "due",
+  grace: "grace",
+  expired: "expired",
+  none: "none",
+};
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
   { title: `${data?.customer.name || "Thành viên"} - Quản trị - Kana Box V2` },
@@ -113,27 +126,31 @@ export async function action({ request, params }: ActionFunctionArgs) {
   return redirect(`/826264/customers/${customerId}`);
 }
 
-const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
-  active: "active",
-  due: "due",
-  grace: "grace",
-  expired: "expired",
-  none: "none",
-};
-
-const statusAccent: Record<string, string> = {
-  active: "border-l-emerald-400",
-  due: "border-l-amber-400",
-  grace: "border-l-orange-400",
-  expired: "border-l-red-400",
-  none: "border-l-zinc-300",
-};
-
-function formatCurrency(amount: number, currency: string): string {
-  if (currency === "VND") {
-    return `${amount.toLocaleString("vi-VN")} ₫`;
-  }
-  return `$${amount.toFixed(2)}`;
+function PaymentActions({
+  paymentId,
+  editUrl,
+  onVoid,
+}: {
+  paymentId: string;
+  editUrl: string;
+  onVoid: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+        <Link to={editUrl}>Sửa</Link>
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+        onClick={onVoid}
+      >
+        <Ban className="h-3 w-3 mr-1" />
+        Hủy bỏ
+      </Button>
+    </div>
+  );
 }
 
 export default function AdminCustomerDetail() {
@@ -147,14 +164,10 @@ export default function AdminCustomerDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm">
-        <Link to="/826264" className="text-zinc-500 hover:text-zinc-700 transition-colors flex items-center gap-1">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Bảng điều khiển
-        </Link>
-        <span className="text-zinc-300">/</span>
-        <span className="text-zinc-900 font-medium">{customer.name}</span>
-      </div>
+      <Breadcrumb items={[
+        { label: "Bảng điều khiển", to: "/826264" },
+        { label: customer.name },
+      ]} />
 
       <Card className={cn("border-l-[3px]", statusAccent[latestStatus.status] || "border-l-zinc-300")}>
         <CardHeader>
@@ -230,13 +243,7 @@ export default function AdminCustomerDetail() {
         </CardHeader>
         {customer.note && (
           <CardContent className="pt-0">
-            <div className="rounded-lg bg-zinc-50 p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <StickyNote className="h-3.5 w-3.5 text-zinc-400" />
-                <span className="text-xs font-medium text-zinc-500">Ghi chú</span>
-              </div>
-              <p className="text-sm text-zinc-700 whitespace-pre-wrap">{customer.note}</p>
-            </div>
+            <NoteBlock icon={StickyNote} label="Ghi chú" text={customer.note} />
           </CardContent>
         )}
       </Card>
@@ -250,15 +257,11 @@ export default function AdminCustomerDetail() {
         </CardHeader>
         <CardContent>
           {payments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 mb-3">
-                <CreditCard className="h-5 w-5 text-zinc-400" />
-              </div>
-              <p className="text-sm text-zinc-500">Chưa có lịch sử thanh toán</p>
+            <EmptyState icon={CreditCard} message="Chưa có lịch sử thanh toán">
               <Button variant="outline" size="sm" className="mt-3" asChild>
                 <Link to={`/826264/payments/new?customerId=${customer._id}`}>Thêm thanh toán đầu tiên</Link>
               </Button>
-            </div>
+            </EmptyState>
           ) : (
             <>
               <div className="hidden md:block">
@@ -294,23 +297,14 @@ export default function AdminCustomerDetail() {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-sm text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
-                                  <Link to={`/826264/payments/${payment._id}/edit`}>Sửa</Link>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => setVoidTarget({
-                                    id: payment._id,
-                                    amount: formatCurrency(payment.amount, payment.currency),
-                                  })}
-                                >
-                                  <Ban className="h-3 w-3 mr-1" />
-                                  Hủy bỏ
-                                </Button>
-                              </div>
+                              <PaymentActions
+                                paymentId={payment._id}
+                                editUrl={`/826264/payments/${payment._id}/edit`}
+                                onVoid={() => setVoidTarget({
+                                  id: payment._id,
+                                  amount: formatCurrency(payment.amount, payment.currency),
+                                })}
+                              />
                             </td>
                           </tr>
                         );
@@ -341,21 +335,14 @@ export default function AdminCustomerDetail() {
                         <div>Số tháng: <span className="text-zinc-700 font-medium">{payment.months}</span></div>
                       </div>
                       <div className="flex items-center gap-2 pt-2 border-t border-zinc-100">
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
-                          <Link to={`/826264/payments/${payment._id}/edit`}>Sửa</Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => setVoidTarget({
+                        <PaymentActions
+                          paymentId={payment._id}
+                          editUrl={`/826264/payments/${payment._id}/edit`}
+                          onVoid={() => setVoidTarget({
                             id: payment._id,
                             amount: formatCurrency(payment.amount, payment.currency),
                           })}
-                        >
-                          <Ban className="h-3 w-3 mr-1" />
-                          Hủy bỏ
-                        </Button>
+                        />
                       </div>
                     </div>
                   );

@@ -4,12 +4,17 @@ import type {
   MetaFunction,
 } from "@remix-run/node";
 import { redirect, json, useLoaderData, useActionData, Form, Link } from "@remix-run/react";
-import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
+import {
+  Breadcrumb,
+  FormErrorBanner,
+  FormMessage,
+  FormActions,
+} from "~/components/shared";
 
 function isDuplicateDisplayNameError(error: unknown): boolean {
   return (
@@ -135,14 +140,10 @@ export default function AdminEditCustomer() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-2 text-sm">
-        <Link to={`/826264/customers/${customer._id}`} className="text-zinc-500 hover:text-zinc-700 transition-colors flex items-center gap-1">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          {customer.displayName}
-        </Link>
-        <span className="text-zinc-300">/</span>
-        <span className="text-zinc-900 font-medium">Sửa</span>
-      </div>
+      <Breadcrumb items={[
+        { label: customer.displayName, to: `/826264/customers/${customer._id}` },
+        { label: "Sửa" },
+      ]} />
 
       <Card>
         <CardHeader>
@@ -151,9 +152,7 @@ export default function AdminEditCustomer() {
         <CardContent>
           <Form method="post" className="space-y-5">
             {actionData?.errors?.form && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-                <p className="text-sm text-red-700">{actionData.errors.form}</p>
-              </div>
+              <FormErrorBanner message={actionData.errors.form} />
             )}
 
             <div className="space-y-2">
@@ -170,11 +169,10 @@ export default function AdminEditCustomer() {
                 maxLength={60}
                 required
               />
-              {actionData?.errors?.displayName ? (
-                <p className="text-sm text-red-600">{actionData.errors.displayName}</p>
-              ) : (
-                <p className="text-xs text-zinc-400">Phải duy nhất. 1–60 ký tự.</p>
-              )}
+              <FormMessage
+                error={actionData?.errors?.displayName}
+                hint={actionData?.errors?.displayName ? undefined : "Phải duy nhất. 1–60 ký tự."}
+              />
             </div>
 
             <div className="space-y-2">
@@ -188,12 +186,12 @@ export default function AdminEditCustomer() {
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <FormActions>
               <Button variant="outline" asChild>
                 <Link to={`/826264/customers/${customer._id}`}>Hủy</Link>
               </Button>
               <Button type="submit">Lưu thay đổi</Button>
-            </div>
+            </FormActions>
           </Form>
         </CardContent>
       </Card>
