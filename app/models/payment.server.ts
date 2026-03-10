@@ -40,6 +40,8 @@ export interface Payment {
   months: number;
   endDate: string;
   note?: string;
+  isVoided?: boolean;
+  voidedAt?: Date;
   createdAt: Date;
 }
 
@@ -94,7 +96,7 @@ export async function listPaymentsForCustomer(
   const collection = db.collection<Payment>("payments");
 
   return collection
-    .find({ customerId: new ObjectId(customerId) })
+    .find({ customerId: new ObjectId(customerId), isVoided: { $ne: true } })
     .sort({ paidDate: -1 })
     .toArray();
 }
@@ -110,7 +112,7 @@ export async function getLatestPaymentForCustomer(
   const collection = db.collection<Payment>("payments");
 
   return collection
-    .find({ customerId: new ObjectId(customerId) })
+    .find({ customerId: new ObjectId(customerId), isVoided: { $ne: true } })
     .sort({ paidDate: -1 })
     .limit(1)
     .next();
@@ -127,6 +129,9 @@ export async function listLatestPaymentsForAllCustomers(): Promise<
       _id: ObjectId;
       latestPayment: Payment;
     }>([
+      {
+        $match: { isVoided: { $ne: true } },
+      },
       {
         $sort: { paidDate: -1 },
       },
@@ -160,6 +165,7 @@ export async function listPaymentsForRevenueWindow(
         $gte: startDate,
         $lte: endDate,
       },
+      isVoided: { $ne: true },
     })
     .toArray();
 }
@@ -269,7 +275,7 @@ export async function updatePayment(
   return result;
 }
 
-export async function deletePayment(id: string): Promise<boolean> {
+export async function voidPayment(id: string): Promise<boolean> {
   if (!ObjectId.isValid(id)) {
     return false;
   }
@@ -277,8 +283,16 @@ export async function deletePayment(id: string): Promise<boolean> {
   const db = await getDb();
   const collection = db.collection<Payment>("payments");
 
-  const result = await collection.deleteOne({ _id: new ObjectId(id) });
-  return result.deletedCount === 1;
+  const result = await collection.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        isVoided: true,
+        voidedAt: new Date(),
+      },
+    }
+  );
+  return result.modifiedCount === 1;
 }
 
 export function computeMonthlyTotals(

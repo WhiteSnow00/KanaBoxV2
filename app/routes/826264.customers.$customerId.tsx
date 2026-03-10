@@ -10,7 +10,7 @@ import {
   resumeRenewal,
   type Customer,
 } from "~/models/customer.server";
-import { listPaymentsForCustomer, deletePayment } from "~/models/payment.server";
+import { listPaymentsForCustomer, voidPayment } from "~/models/payment.server";
 import { computeStatus } from "~/models/subscriptionStatus";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
@@ -84,7 +84,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   } else if (intent === "deletePayment") {
     const paymentId = String(formData.get("paymentId") || "");
     if (paymentId && ObjectId.isValid(paymentId)) {
-      await deletePayment(paymentId);
+      await voidPayment(paymentId);
     }
     return redirect(`/826264/customers/${customerId}`);
   }
@@ -362,7 +362,7 @@ export default function AdminCustomerDetail() {
                                 method="post"
                                 className="inline"
                                 onSubmit={(e) => {
-                                  if (!confirm("Bạn có chắc muốn xóa thanh toán này không?")) {
+                                  if (!confirm("Bạn có chắc muốn hủy bỏ thanh toán này không? Dữ liệu sẽ được giữ lại nhưng không còn tính vào báo cáo.")) {
                                     e.preventDefault();
                                   }
                                 }}
@@ -373,7 +373,7 @@ export default function AdminCustomerDetail() {
                                   type="submit"
                                   className="text-red-600 hover:text-red-900 font-medium"
                                 >
-                                  Xóa
+                                  Hủy bỏ
                                 </button>
                               </Form>
                             </div>

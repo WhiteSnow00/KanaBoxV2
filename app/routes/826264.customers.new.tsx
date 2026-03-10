@@ -3,7 +3,6 @@ import { redirect, json, useActionData, Form, Link } from "@remix-run/react";
 import { useState } from "react";
 import {
   createCustomer,
-  deleteCustomer,
   findArchivedByName,
   unarchiveCustomer,
   customerExistsByDisplayName,

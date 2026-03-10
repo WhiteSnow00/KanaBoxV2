@@ -296,8 +296,18 @@ export async function deleteCustomer(id: string): Promise<boolean> {
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
 
-  const result = await collection.deleteOne({ _id: new ObjectId(id) });
-  return result.deletedCount === 1;
+  const result = await collection.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        isArchived: true,
+        archivedAt: new Date(),
+        isPublicHidden: true,
+        updatedAt: new Date(),
+      },
+    }
+  );
+  return result.modifiedCount === 1;
 }
 
 export async function updateCustomer(
