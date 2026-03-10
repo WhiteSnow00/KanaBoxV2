@@ -1,9 +1,13 @@
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { redirect, json, useActionData, Form, Link } from "@remix-run/react";
 import { useState } from "react";
-import { ObjectId } from "mongodb";
-import { MongoError } from "mongodb";
-import { createCustomer, deleteCustomer } from "~/models/customer.server";
+import {
+  createCustomer,
+  deleteCustomer,
+  findArchivedByName,
+  unarchiveCustomer,
+  customerExistsByDisplayName,
+} from "~/models/customer.server";
 import { createPayment } from "~/models/payment.server";
 import {
   calculateRecommendedMonths,
@@ -99,32 +103,27 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
-  let customerId: string | null = null;
-
   try {
-    const customer = await createCustomer({ displayName, note: note || undefined });
-    customerId = customer._id.toString();
+    const archived = await findArchivedByName(displayName);
 
-    await createPayment({
-      customerId,
-      paidDate,
-      currency,
-      amount,
-      months,
-      note: paymentNote || undefined,
-    });
+    if (archived) {
+      const customerId = archived._id.toString();
+      await unarchiveCustomer(customerId, note || undefined);
 
-    return redirect(`/826264/customers/${customerId}`);
-  } catch (error) {
-    if (customerId) {
-      try {
-        await deleteCustomer(customerId);
-      } catch (deleteError) {
-        console.error("Failed to rollback customer creation:", deleteError);
-      }
+      await createPayment({
+        customerId,
+        paidDate,
+        currency,
+        amount,
+        months,
+        note: paymentNote || undefined,
+      });
+
+      return redirect(`/826264/customers/${customerId}`);
     }
 
-    if (error instanceof MongoError && error.code === 11000) {
+    const activeExists = await customerExistsByDisplayName(displayName);
+    if (activeExists) {
       return json<ActionData>(
         {
           errors: {
@@ -145,6 +144,20 @@ export async function action({ request }: ActionFunctionArgs) {
       );
     }
 
+    const customer = await createCustomer({ displayName, note: note || undefined });
+    const customerId = customer._id.toString();
+
+    await createPayment({
+      customerId,
+      paidDate,
+      currency,
+      amount,
+      months,
+      note: paymentNote || undefined,
+    });
+
+    return redirect(`/826264/customers/${customerId}`);
+  } catch (error) {
     console.error("Error creating customer/payment:", error);
     return json<ActionData>(
       {

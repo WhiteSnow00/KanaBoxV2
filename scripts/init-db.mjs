@@ -11,9 +11,10 @@ if (!MONGODB_URI) {
 const DESIRED_INDEXES = {
     customers: [
         {
-            name: "ix_customers_displayName_unique",
+            name: "ix_customers_displayName_active_unique",
             key: { displayName: 1 },
             unique: true,
+            partialFilterExpression: { isArchived: { $ne: true } },
         },
     ],
     payments: [
@@ -33,8 +34,11 @@ async function ensureIndex(collection, desired) {
         const keysMatch =
             JSON.stringify(found.key) === JSON.stringify(desired.key);
         const uniqueMatch = (found.unique || false) === desired.unique;
+        const partialMatch = desired.partialFilterExpression
+            ? JSON.stringify(found.partialFilterExpression) === JSON.stringify(desired.partialFilterExpression)
+            : !found.partialFilterExpression;
 
-        if (keysMatch && uniqueMatch) {
+        if (keysMatch && uniqueMatch && partialMatch) {
             console.log(`  [OK] Index "${desired.name}" already exists and is correct.`);
             return;
         }
@@ -43,10 +47,19 @@ async function ensureIndex(collection, desired) {
         await collection.dropIndex(desired.name);
     }
 
+    const oldUnique = existing.find((idx) => idx.name === "ix_customers_displayName_unique");
+    if (oldUnique) {
+        console.log(`  [MIGRATE] Dropping old index "ix_customers_displayName_unique"...`);
+        await collection.dropIndex("ix_customers_displayName_unique");
+    }
+
     console.log(`  [CREATE] Creating index "${desired.name}"...`);
     const options = { name: desired.name };
     if (desired.unique) {
         options.unique = true;
+    }
+    if (desired.partialFilterExpression) {
+        options.partialFilterExpression = desired.partialFilterExpression;
     }
     await collection.createIndex(desired.key, options);
     console.log(`  [DONE] Index "${desired.name}" created.`);

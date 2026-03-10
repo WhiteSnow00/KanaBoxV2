@@ -17,6 +17,8 @@ export interface Customer {
   hiddenReason?: string;
   renewalCancelled?: boolean;
   cancelledAt?: string;
+  isArchived?: boolean;
+  archivedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +26,51 @@ export interface Customer {
 export interface CustomerInput {
   displayName: string;
   note?: string;
+}
+
+export async function findArchivedByName(name: string): Promise<Customer | null> {
+  const db = await getDb();
+  const collection = db.collection<Customer>("customers");
+  return collection.findOne({
+    displayName: { $regex: `^${name.trim()}$`, $options: "i" },
+    isArchived: true,
+  });
+}
+
+export async function unarchiveCustomer(id: string, note?: string): Promise<Customer | null> {
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+
+  const db = await getDb();
+  const collection = db.collection<Customer>("customers");
+
+  const setOps: Record<string, unknown> = {
+    isArchived: false,
+    isPublicHidden: false,
+    renewalCancelled: false,
+    updatedAt: new Date(),
+  };
+
+  if (note !== undefined) {
+    setOps.note = note || undefined;
+  }
+
+  const result = await collection.findOneAndUpdate(
+    { _id: new ObjectId(id) },
+    {
+      $set: setOps,
+      $unset: {
+        archivedAt: "",
+        hiddenAt: "",
+        hiddenReason: "",
+        cancelledAt: "",
+      },
+    },
+    { returnDocument: "after" }
+  );
+
+  return result;
 }
 
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
@@ -48,12 +95,16 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
 
 export async function listCustomers(
   searchQuery?: string,
-  options?: { publicOnly?: boolean }
+  options?: { publicOnly?: boolean; includeArchived?: boolean }
 ): Promise<Customer[]> {
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
 
   const filter: Record<string, unknown> = {};
+
+  if (!options?.includeArchived) {
+    filter.isArchived = { $ne: true };
+  }
 
   if (options?.publicOnly) {
     filter.isPublicHidden = { $ne: true };
@@ -108,15 +159,22 @@ export async function updateCustomerNote(
 export async function countCustomers(): Promise<number> {
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
-  return collection.countDocuments();
+  return collection.countDocuments({ isArchived: { $ne: true } });
 }
 
-export async function customerExistsByDisplayName(name: string): Promise<boolean> {
+export async function customerExistsByDisplayName(
+  name: string,
+  excludeArchived = true
+): Promise<boolean> {
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
-  const count = await collection.countDocuments({
+  const filter: Record<string, unknown> = {
     displayName: { $regex: `^${name.trim()}$`, $options: "i" },
-  });
+  };
+  if (excludeArchived) {
+    filter.isArchived = { $ne: true };
+  }
+  const count = await collection.countDocuments(filter);
   return count > 0;
 }
 
@@ -206,6 +264,30 @@ export async function setRenewalCancelled(
   return result;
 }
 
+export async function archiveCustomer(id: string): Promise<Customer | null> {
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+
+  const db = await getDb();
+  const collection = db.collection<Customer>("customers");
+
+  const result = await collection.findOneAndUpdate(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        isArchived: true,
+        archivedAt: new Date(),
+        isPublicHidden: true,
+        updatedAt: new Date(),
+      },
+    },
+    { returnDocument: "after" }
+  );
+
+  return result;
+}
+
 export async function deleteCustomer(id: string): Promise<boolean> {
   if (!ObjectId.isValid(id)) {
     return false;
@@ -282,22 +364,4 @@ export async function cancelRenewal(id: string): Promise<Customer | null> {
 
 export async function resumeRenewal(id: string): Promise<Customer | null> {
   return setRenewalCancelled(id, false);
-}
-
-export async function deleteCustomerWithPayments(customerId: string): Promise<boolean> {
-  if (!ObjectId.isValid(customerId)) {
-    return false;
-  }
-
-  const db = await getDb();
-
-  await db.collection("payments").deleteMany({
-    customerId: new ObjectId(customerId),
-  });
-
-  const result = await db.collection<Customer>("customers").deleteOne({
-    _id: new ObjectId(customerId),
-  });
-
-  return result.deletedCount === 1;
 }

@@ -5,7 +5,7 @@ import {
   getCustomerById,
   hideCustomerFromPublic,
   unhideCustomer,
-  deleteCustomerWithPayments,
+  archiveCustomer,
   cancelRenewal,
   resumeRenewal,
   type Customer,
@@ -79,7 +79,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     await resumeRenewal(customerId);
     return redirect(`/826264/customers/${customerId}`);
   } else if (intent === "deleteCustomer") {
-    await deleteCustomerWithPayments(customerId);
+    await archiveCustomer(customerId);
     return redirect("/826264");
   } else if (intent === "deletePayment") {
     const paymentId = String(formData.get("paymentId") || "");
@@ -144,14 +144,14 @@ export default function AdminCustomerDetail() {
 
       <div
         className={`bg-white shadow rounded-lg overflow-hidden ${latestStatus.status === "none"
-            ? ""
-            : latestStatus.status === "active"
-              ? "border-l-4 border-l-green-500"
-              : latestStatus.status === "due"
-                ? "border-l-4 border-l-yellow-500"
-                : latestStatus.status === "grace"
-                  ? "border-l-4 border-l-orange-500"
-                  : "border-l-4 border-l-red-500"
+          ? ""
+          : latestStatus.status === "active"
+            ? "border-l-4 border-l-green-500"
+            : latestStatus.status === "due"
+              ? "border-l-4 border-l-yellow-500"
+              : latestStatus.status === "grace"
+                ? "border-l-4 border-l-orange-500"
+                : "border-l-4 border-l-red-500"
           }`}
       >
         <div className="p-4 sm:p-6">
@@ -239,7 +239,7 @@ export default function AdminCustomerDetail() {
                 method="post"
                 className="inline"
                 onSubmit={(e) => {
-                  if (!confirm("Bạn có chắc muốn xóa thành viên này và toàn bộ thanh toán của họ không? Thao tác này không thể hoàn tác.")) {
+                  if (!confirm("Bạn có chắc muốn lưu trữ thành viên này không? Họ sẽ bị ẩn khỏi bảng nhưng dữ liệu thanh toán vẫn được giữ lại.")) {
                     e.preventDefault();
                   }
                 }}
@@ -249,7 +249,7 @@ export default function AdminCustomerDetail() {
                   type="submit"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
                 >
-                  Xóa thành viên
+                  Lưu trữ thành viên
                 </button>
               </Form>
             </div>

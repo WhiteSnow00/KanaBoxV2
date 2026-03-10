@@ -1,8 +1,9 @@
 
-import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { json, useLoaderData, Link } from "@remix-run/react";
+import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import { json, useLoaderData, Link, useFetcher } from "@remix-run/react";
 import { useState } from "react";
-import { listCustomers, countCustomers } from "~/models/customer.server";
+import { ObjectId } from "mongodb";
+import { listCustomers, countCustomers, archiveCustomer } from "~/models/customer.server";
 import {
   computeStatus,
   listPaymentsForRevenueWindow,
@@ -45,6 +46,20 @@ function generateMonthBuckets(startBucket: string, endBucket: string): string[] 
   }
 
   return buckets;
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const intent = String(formData.get("intent") || "");
+
+  if (intent === "archive") {
+    const customerId = String(formData.get("customerId") || "");
+    if (customerId && ObjectId.isValid(customerId)) {
+      await archiveCustomer(customerId);
+    }
+  }
+
+  return json({ ok: true });
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -162,12 +177,20 @@ export default function AdminDashboard() {
   } = useLoaderData<typeof loader>();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const fetcher = useFetcher();
 
   const filteredCustomers = customers.filter((item) => {
     const matchesSearch = item.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === null || item.status.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleArchive = (customerId: string) => {
+    fetcher.submit(
+      { intent: "archive", customerId },
+      { method: "post" }
+    );
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -253,6 +276,7 @@ export default function AdminDashboard() {
               customers={filteredCustomers}
               basePath="/826264/customers"
               showAdminActions={true}
+              onArchive={handleArchive}
             />
           </div>
         </div>

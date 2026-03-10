@@ -1,4 +1,4 @@
-import { Link } from "@remix-run/react";
+import { Link, Form } from "@remix-run/react";
 
 export interface CustomerWithStatus {
   customer: {
@@ -46,6 +46,7 @@ interface CustomerTableProps {
   showAdminActions?: boolean;
   readOnly?: boolean;
   i18n?: CustomerTableI18n;
+  onArchive?: (customerId: string) => void;
 }
 
 function StatusBadge({
@@ -100,6 +101,7 @@ export default function CustomerTable({
   showAdminActions = false,
   readOnly = false,
   i18n,
+  onArchive,
 }: CustomerTableProps) {
   const t: CustomerTableI18n =
     i18n || ({
@@ -129,6 +131,8 @@ export default function CustomerTable({
       </div>
     );
   }
+
+  const isOverdue = (status: string) => status === "expired" || status === "grace";
 
   return (
     <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg">
@@ -245,12 +249,27 @@ export default function CustomerTable({
               </td>
               {!readOnly && (
                 <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-right">
-                  <Link
-                    to={`${basePath}/${customer._id}`}
-                    className="text-blue-600 hover:text-blue-900 font-medium"
-                  >
-                    {t.view}
-                  </Link>
+                  <div className="flex items-center justify-end gap-2">
+                    <Link
+                      to={`${basePath}/${customer._id}`}
+                      className="text-blue-600 hover:text-blue-900 font-medium"
+                    >
+                      {t.view}
+                    </Link>
+                    {showAdminActions && isOverdue(status.status) && onArchive && (
+                      <button
+                        type="button"
+                        className="text-red-600 hover:text-red-900 font-medium text-xs"
+                        onClick={() => {
+                          if (confirm(`Lưu trữ "${customer.name}"? Họ sẽ bị ẩn khỏi bảng nhưng dữ liệu thanh toán vẫn được giữ lại.`)) {
+                            onArchive(customer._id);
+                          }
+                        }}
+                      >
+                        Lưu trữ
+                      </button>
+                    )}
+                  </div>
                 </td>
               )}
             </tr>
