@@ -24,7 +24,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   }
 
   const customer = await getCustomerById(customerId);
-  if (!customer || customer.isPublicHidden) {
+  if (!customer || customer.isPublicHidden || customer.isArchived) {
     throw new Response("Không tìm thấy thành viên", { status: 404 });
   }
 
@@ -43,14 +43,14 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     },
     latestPayment: latestPayment
       ? {
-          _id: latestPayment._id.toString(),
-          paidDate: latestPayment.paidDate,
-          endDate: latestPayment.endDate,
-          currency: latestPayment.currency,
-          amount: latestPayment.amount,
-          months: latestPayment.months,
-          note: latestPayment.note,
-        }
+        _id: latestPayment._id.toString(),
+        paidDate: latestPayment.paidDate,
+        endDate: latestPayment.endDate,
+        currency: latestPayment.currency,
+        amount: latestPayment.amount,
+        months: latestPayment.months,
+        note: latestPayment.note,
+      }
       : null,
     status,
     lang,
@@ -104,17 +104,16 @@ export default function PublicCustomerDetail() {
       </div>
 
       <div
-        className={`bg-white shadow rounded-lg overflow-hidden ${
-          status.status === "none"
+        className={`bg-white shadow rounded-lg overflow-hidden ${status.status === "none"
             ? ""
             : status.status === "active"
-            ? "border-l-4 border-l-green-500"
-            : status.status === "due"
-            ? "border-l-4 border-l-yellow-500"
-            : status.status === "grace"
-            ? "border-l-4 border-l-orange-500"
-            : "border-l-4 border-l-red-500"
-        }`}
+              ? "border-l-4 border-l-green-500"
+              : status.status === "due"
+                ? "border-l-4 border-l-yellow-500"
+                : status.status === "grace"
+                  ? "border-l-4 border-l-orange-500"
+                  : "border-l-4 border-l-red-500"
+          }`}
       >
         <div className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -155,11 +154,10 @@ export default function PublicCustomerDetail() {
                   {strings.customerDetail.currentPeriodEnds}
                 </dt>
                 <dd
-                  className={`mt-1 text-lg font-semibold ${
-                    status.status === "expired"
+                  className={`mt-1 text-lg font-semibold ${status.status === "expired"
                       ? "text-red-600"
                       : "text-gray-900"
-                  }`}
+                    }`}
                 >
                   {latestPayment.endDate}
                 </dd>
