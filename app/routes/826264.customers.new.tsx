@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { redirect, json, useActionData, Form, Link } from "@remix-run/react";
 import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import {
   createCustomer,
   findArchivedByName,
@@ -14,6 +15,13 @@ import {
   BASE_PRICE_USD,
 } from "~/models/subscriptionStatus";
 import { getTodayDateOnly } from "~/utils/date";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Textarea } from "~/components/ui/textarea";
+import { Label } from "~/components/ui/label";
+import { Separator } from "~/components/ui/separator";
+import { cn } from "~/lib/utils";
 
 const VND_AMOUNT_PRESETS = [50000, 100000, 150000, 200000, 250000, 300000] as const;
 
@@ -204,151 +212,123 @@ export default function AdminAddCustomer() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link
-          to="/826264"
-          className="text-sm text-blue-600 hover:text-blue-900"
-        >
-          ← Quay lại bảng điều khiển
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="flex items-center gap-2 text-sm">
+        <Link to="/826264" className="text-zinc-500 hover:text-zinc-700 transition-colors flex items-center gap-1">
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Bảng điều khiển
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">
-          Thêm thành viên mới
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Create customer with initial payment
-        </p>
+        <span className="text-zinc-300">/</span>
+        <span className="text-zinc-900 font-medium">Thêm thành viên</span>
       </div>
 
-      <div className="bg-white shadow rounded-lg">
-        <Form method="post" className="space-y-6 p-6">
-          {actionData?.errors?.form && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-700">{actionData.errors.form}</p>
-            </div>
-          )}
-
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Tên thành viên <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              id="name"
-              defaultValue={actionData?.values?.displayName || ""}
-              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.displayName ? "border-red-300" : ""
-                }`}
-              placeholder="Tên thành viên"
-              maxLength={60}
-              required
-            />
-            {actionData?.errors?.displayName ? (
-              <p className="mt-1 text-sm text-red-600">
-                {actionData.errors.displayName}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-gray-500">
-                Phải duy nhất. 1–60 ký tự.
-              </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Thêm thành viên mới</CardTitle>
+          <p className="text-sm text-zinc-500 mt-1">Tạo thành viên kèm thanh toán ban đầu</p>
+        </CardHeader>
+        <CardContent>
+          <Form method="post" className="space-y-5">
+            {actionData?.errors?.form && (
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                <p className="text-sm text-red-700">{actionData.errors.form}</p>
+              </div>
             )}
-          </div>
 
-          <div>
-            <label
-              htmlFor="note"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Ghi chú thành viên
-            </label>
-            <textarea
-              name="note"
-              id="note"
-              rows={2}
-              defaultValue={actionData?.values?.note || ""}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="Ghi chú (tùy chọn) về thành viên..."
-            />
-          </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Tên thành viên <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  name="name"
+                  id="name"
+                  defaultValue={actionData?.values?.displayName || ""}
+                  className={actionData?.errors?.displayName ? "border-red-300 focus-visible:ring-red-500" : ""}
+                  placeholder="Tên thành viên"
+                  maxLength={60}
+                  required
+                />
+                {actionData?.errors?.displayName ? (
+                  <p className="text-sm text-red-600">{actionData.errors.displayName}</p>
+                ) : (
+                  <p className="text-xs text-zinc-400">Phải duy nhất. 1–60 ký tự.</p>
+                )}
+              </div>
 
-          <div className="border-t border-gray-200 pt-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Thanh toán ban đầu
-            </h2>
-
-            <div className="mb-4">
-              <label
-                htmlFor="currency"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Tiền tệ <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="currency"
-                id="currency"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value as "VND" | "USD")}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                required
-              >
-                <option value="VND">VND (₫)</option>
-                <option value="USD">USD ($)</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                Giá cơ bản: {BASE_PRICE_VND.toLocaleString("vi-VN")} ₫/tháng hoặc
-                ${BASE_PRICE_USD}/tháng
-              </p>
+              <div className="space-y-2">
+                <Label htmlFor="note">Ghi chú thành viên</Label>
+                <Textarea
+                  name="note"
+                  id="note"
+                  rows={2}
+                  defaultValue={actionData?.values?.note || ""}
+                  placeholder="Ghi chú (tùy chọn) về thành viên..."
+                />
+              </div>
             </div>
 
-            <div className="mb-4">
-              <label
-                htmlFor="amount"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Số tiền <span className="text-red-500">*</span>
-              </label>
-              <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {currency === "VND" && (
-                  <select
-                    id="amountPreset"
-                    value={
-                      VND_AMOUNT_PRESETS.includes(
-                        Math.round(amount) as (typeof VND_AMOUNT_PRESETS)[number]
-                      )
-                        ? String(Math.round(amount))
-                        : "custom"
-                    }
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      if (next === "custom") return;
-                      const nextAmount = parseInt(next, 10) || 0;
-                      setAmount(nextAmount);
-                      if (!monthsManuallyEdited) {
-                        setMonths(calculateRecommendedMonths(nextAmount, currency));
-                      }
-                    }}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  >
-                    <option value="50000">50k</option>
-                    <option value="100000">100k</option>
-                    <option value="150000">150k</option>
-                    <option value="200000">200k</option>
-                    <option value="250000">250k</option>
-                    <option value="300000">300k</option>
-                    <option value="custom">Tùy chỉnh</option>
-                  </select>
-                )}
+            <Separator />
 
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-zinc-900">Thanh toán ban đầu</h3>
+
+              <div className="space-y-2">
+                <Label htmlFor="currency">
+                  Tiền tệ <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  name="currency"
+                  id="currency"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as "VND" | "USD")}
+                  className="flex h-9 w-full rounded-lg border border-zinc-300 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
+                  required
+                >
+                  <option value="VND">VND (₫)</option>
+                  <option value="USD">USD ($)</option>
+                </select>
+                <p className="text-xs text-zinc-400">
+                  Giá cơ bản: {BASE_PRICE_VND.toLocaleString("vi-VN")} ₫/tháng hoặc ${BASE_PRICE_USD}/tháng
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="amount">
+                  Số tiền <span className="text-red-500">*</span>
+                </Label>
+                {currency === "VND" && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {VND_AMOUNT_PRESETS.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => {
+                          setAmount(preset);
+                          if (!monthsManuallyEdited) {
+                            setMonths(calculateRecommendedMonths(preset, currency));
+                          }
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                          Math.round(amount) === preset
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-300"
+                            : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
+                        )}
+                      >
+                        {(preset / 1000)}k
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 sm:text-sm">
+                    <span className="text-zinc-400 text-sm">
                       {currency === "VND" ? "₫" : "$"}
                     </span>
                   </div>
-                  <input
+                  <Input
                     type="number"
                     name="amount"
                     id="amount"
@@ -362,108 +342,86 @@ export default function AdminAddCustomer() {
                         setMonths(calculateRecommendedMonths(val, currency));
                       }
                     }}
-                    className={`block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.amount ? "border-red-300" : ""
-                      }`}
+                    className={cn("pl-7", actionData?.errors?.amount && "border-red-300 focus-visible:ring-red-500")}
                     placeholder={currency === "VND" ? "50000" : "2.00"}
                     required
                   />
                 </div>
+                {actionData?.errors?.amount && (
+                  <p className="text-sm text-red-600">{actionData.errors.amount}</p>
+                )}
               </div>
-              {currency === "VND" && (
-                <p className="mt-1 text-xs text-gray-500">
-                  VND phải là số nguyên (không có phần thập phân)
+
+              <div className="space-y-2">
+                <Label htmlFor="months">
+                  Số tháng <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  name="months"
+                  id="months"
+                  min="1"
+                  step="1"
+                  value={months}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10) || 1;
+                    setMonths(val);
+                    setMonthsManuallyEdited(true);
+                  }}
+                  className={actionData?.errors?.months ? "border-red-300 focus-visible:ring-red-500" : ""}
+                  required
+                />
+                <p className="text-xs text-zinc-500">
+                  Gợi ý: <span className="font-medium text-indigo-600">{recommendedMonths}</span> tháng (theo số tiền)
                 </p>
-              )}
-              {actionData?.errors?.amount && (
-                <p className="mt-1 text-sm text-red-600">
-                  {actionData.errors.amount}
+                {actionData?.errors?.months && (
+                  <p className="text-sm text-red-600">{actionData.errors.months}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="paidDate">
+                  Ngày thanh toán <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="date"
+                  name="paidDate"
+                  id="paidDate"
+                  defaultValue={actionData?.values?.paidDate || getTodayDateOnly()}
+                  className={actionData?.errors?.paidDate ? "border-red-300 focus-visible:ring-red-500" : ""}
+                  required
+                />
+                <p className="text-xs text-zinc-400">
+                  Hết hạn = ngày thanh toán + số tháng (theo lịch)
                 </p>
-              )}
+                {actionData?.errors?.paidDate && (
+                  <p className="text-sm text-red-600">{actionData.errors.paidDate}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="paymentNote">Ghi chú thanh toán</Label>
+                <Textarea
+                  name="paymentNote"
+                  id="paymentNote"
+                  rows={2}
+                  defaultValue={actionData?.values?.paymentNote || ""}
+                  placeholder="Ghi chú (tùy chọn) về thanh toán..."
+                />
+              </div>
             </div>
 
-            <div className="mb-4">
-              <label
-                htmlFor="months"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Số tháng <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="months"
-                id="months"
-                min="1"
-                step="1"
-                value={months}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10) || 1;
-                  setMonths(val);
-                  setMonthsManuallyEdited(true);
-                }}
-                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.months ? "border-red-300" : ""
-                  }`}
-                required
-              />
-              <p className="mt-1 text-sm text-gray-600">
-                Gợi ý: <strong>{recommendedMonths}</strong> tháng (theo số tiền)
-              </p>
-            </div>
+            <Separator />
 
-            <div className="mb-4">
-              <label
-                htmlFor="paidDate"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Ngày thanh toán <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                name="paidDate"
-                id="paidDate"
-                defaultValue={actionData?.values?.paidDate || getTodayDateOnly()}
-                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.paidDate ? "border-red-300" : ""
-                  }`}
-                required
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Hết hạn: ngày thanh toán + số tháng (theo lịch)
-              </p>
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="outline" asChild>
+                <Link to="/826264">Hủy</Link>
+              </Button>
+              <Button type="submit">Tạo thành viên và thanh toán</Button>
             </div>
-
-            <div>
-              <label
-                htmlFor="paymentNote"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Ghi chú thanh toán
-              </label>
-              <textarea
-                name="paymentNote"
-                id="paymentNote"
-                rows={2}
-                defaultValue={actionData?.values?.paymentNote || ""}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                placeholder="Ghi chú (tùy chọn) về thanh toán..."
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
-            <Link
-              to="/826264"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Hủy
-            </Link>
-            <button
-              type="submit"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            >
-              Tạo thành viên và thanh toán
-            </button>
-          </div>
-        </Form>
-      </div>
+          </Form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

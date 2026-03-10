@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
 import { useState, useRef, useEffect } from "react";
+import { Search, Users, CheckCircle, Clock, AlertTriangle, XCircle } from "lucide-react";
 import { listCustomers } from "~/models/customer.server";
 import {
   computeStatus,
@@ -10,6 +11,8 @@ import { getTodayDateOnly } from "~/utils/date";
 import CustomerTable from "~/components/CustomerTable";
 import PublicLanguageSelect from "~/components/PublicLanguageSelect";
 import { getPublicStrings, normalizePublicLang } from "~/i18n/public";
+import { cn } from "~/lib/utils";
+import { Input } from "~/components/ui/input";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   const lang = data?.lang === "en" ? "en" : "vi";
@@ -81,37 +84,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   });
 }
 
-function StatusCard({
-  title,
-  count,
-  bgClass,
-  borderClass,
-  textClass,
-  onClick,
-  isSelected,
-}: {
-  title: string;
-  count: number;
-  bgClass: string;
-  borderClass: string;
-  textClass: string;
-  onClick?: () => void;
-  isSelected?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg border-2 ${borderClass} ${bgClass} p-4 sm:p-6 text-left w-full transition-all cursor-pointer ${isSelected ? "ring-2 ring-offset-2 ring-blue-500 scale-[1.02]" : "hover:opacity-80"
-        }`}
-    >
-      <p className={`text-xs sm:text-sm font-medium ${textClass}`}>{title}</p>
-      <p className={`mt-1 text-2xl sm:text-3xl font-semibold ${textClass}`}>
-        {count.toLocaleString()}
-      </p>
-    </button>
-  );
-}
+const statusCardConfig = [
+  { key: "active", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-400" },
+  { key: "due", icon: Clock, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", ring: "ring-amber-400" },
+  { key: "grace", icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", ring: "ring-orange-400" },
+  { key: "expired", icon: XCircle, color: "text-red-600", bg: "bg-red-50", border: "border-red-200", ring: "ring-red-400" },
+] as const;
 
 export default function PublicHome() {
   const { customers, lang, statusCounts, totalCount } = useLoaderData<typeof loader>();
@@ -138,13 +116,13 @@ export default function PublicHome() {
   });
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
             {strings.membersHeading}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-zinc-500">
             {strings.membersCount(filteredCustomers.length)}
           </p>
         </div>
@@ -155,74 +133,69 @@ export default function PublicHome() {
           optionEn={strings.languageOptions.en}
         />
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-        <StatusCard
-          title={strings.membersHeading}
-          count={totalCount}
-          bgClass="bg-gray-100"
-          borderClass="border-gray-400"
-          textClass="text-gray-900"
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <button
+          type="button"
           onClick={() => setStatusFilter(null)}
-          isSelected={statusFilter === null}
-        />
-        <StatusCard
-          title={strings.statusLabels.active}
-          count={statusCounts.active}
-          bgClass="bg-green-100"
-          borderClass="border-green-600"
-          textClass="text-green-900"
-          onClick={() => setStatusFilter(statusFilter === "active" ? null : "active")}
-          isSelected={statusFilter === "active"}
-        />
-        <StatusCard
-          title={strings.statusLabels.due}
-          count={statusCounts.due}
-          bgClass="bg-yellow-100"
-          borderClass="border-yellow-600"
-          textClass="text-yellow-900"
-          onClick={() => setStatusFilter(statusFilter === "due" ? null : "due")}
-          isSelected={statusFilter === "due"}
-        />
-        <StatusCard
-          title={strings.statusLabels.grace}
-          count={statusCounts.grace}
-          bgClass="bg-orange-100"
-          borderClass="border-orange-600"
-          textClass="text-orange-900"
-          onClick={() => setStatusFilter(statusFilter === "grace" ? null : "grace")}
-          isSelected={statusFilter === "grace"}
-        />
-        <StatusCard
-          title={strings.statusLabels.expired}
-          count={statusCounts.expired}
-          bgClass="bg-red-100"
-          borderClass="border-red-600"
-          textClass="text-red-900"
-          onClick={() => setStatusFilter(statusFilter === "expired" ? null : "expired")}
-          isSelected={statusFilter === "expired"}
-        />
+          className={cn(
+            "group rounded-xl border bg-white p-4 text-left transition-all",
+            statusFilter === null
+              ? "border-indigo-300 ring-2 ring-indigo-200 shadow-sm"
+              : "border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
+          )}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="h-4 w-4 text-indigo-500" />
+            <span className="text-xs font-medium text-zinc-500">{strings.membersHeading}</span>
+          </div>
+          <p className="text-2xl font-semibold text-zinc-900 tabular-nums">{totalCount}</p>
+        </button>
+        {statusCardConfig.map(({ key, icon: Icon, color, bg, border, ring }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setStatusFilter(statusFilter === key ? null : key)}
+            className={cn(
+              "group rounded-xl border p-4 text-left transition-all",
+              bg,
+              statusFilter === key
+                ? `${border} ring-2 ${ring} shadow-sm`
+                : `${border} hover:shadow-sm`
+            )}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Icon className={cn("h-4 w-4", color)} />
+              <span className={cn("text-xs font-medium", color)}>
+                {strings.statusLabels[key]}
+              </span>
+            </div>
+            <p className={cn("text-2xl font-semibold tabular-nums", color)}>
+              {statusCounts[key]}
+            </p>
+          </button>
+        ))}
       </div>
-      <div>
-        <input
+
+      <div className="relative max-w-xs">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+        <Input
           ref={searchInputRef}
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder={lang === "en" ? "Search... (Ctrl+K)" : "Tìm kiếm... (Ctrl+K)"}
-          className="block w-full sm:w-64 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm mb-4"
+          className="pl-9"
         />
       </div>
-      <div className="overflow-x-auto -mx-4 sm:mx-0">
-        <div className="inline-block min-w-full align-middle px-4 sm:px-0">
-          <CustomerTable
-            customers={filteredCustomers}
-            basePath="/customers"
-            showAdminActions={false}
-            readOnly={true}
-            i18n={strings.customerTable}
-          />
-        </div>
-      </div>
+
+      <CustomerTable
+        customers={filteredCustomers}
+        basePath="/customers"
+        showAdminActions={false}
+        readOnly={true}
+        i18n={strings.customerTable}
+      />
     </div>
   );
 }

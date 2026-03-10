@@ -4,6 +4,12 @@ import type {
   MetaFunction,
 } from "@remix-run/node";
 import { redirect, json, useLoaderData, useActionData, Form, Link } from "@remix-run/react";
+import { ArrowLeft } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Textarea } from "~/components/ui/textarea";
+import { Label } from "~/components/ui/label";
 
 function isDuplicateDisplayNameError(error: unknown): boolean {
   return (
@@ -128,87 +134,69 @@ export default function AdminEditCustomer() {
   const actionData = useActionData<typeof action>();
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link
-          to={`/826264/customers/${customer._id}`}
-          className="text-sm text-blue-600 hover:text-blue-900"
-        >
-          ← Quay lại {customer.displayName}
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="flex items-center gap-2 text-sm">
+        <Link to={`/826264/customers/${customer._id}`} className="text-zinc-500 hover:text-zinc-700 transition-colors flex items-center gap-1">
+          <ArrowLeft className="h-3.5 w-3.5" />
+          {customer.displayName}
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">
-          Sửa thành viên
-        </h1>
+        <span className="text-zinc-300">/</span>
+        <span className="text-zinc-900 font-medium">Sửa</span>
       </div>
 
-      <div className="bg-white shadow rounded-lg">
-        <Form method="post" className="space-y-6 p-6">
-          {actionData?.errors?.form && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-700">{actionData.errors.form}</p>
-            </div>
-          )}
-
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Tên <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              id="name"
-              defaultValue={actionData?.values?.displayName || customer.displayName}
-              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${actionData?.errors?.displayName ? "border-red-300" : ""
-                }`}
-              placeholder="Tên thành viên"
-              maxLength={60}
-              required
-            />
-            {actionData?.errors?.displayName ? (
-              <p className="mt-1 text-sm text-red-600">{actionData.errors.displayName}</p>
-            ) : (
-              <p className="mt-1 text-xs text-gray-500">
-                Phải duy nhất. 1–60 ký tự.
-              </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Sửa thành viên</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form method="post" className="space-y-5">
+            {actionData?.errors?.form && (
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                <p className="text-sm text-red-700">{actionData.errors.form}</p>
+              </div>
             )}
-          </div>
 
-          <div>
-            <label
-              htmlFor="note"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Ghi chú
-            </label>
-            <textarea
-              name="note"
-              id="note"
-              rows={4}
-              defaultValue={actionData?.values?.note || customer.note || ""}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="Ghi chú (tùy chọn) về thành viên..."
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Tên <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="text"
+                name="name"
+                id="name"
+                defaultValue={actionData?.values?.displayName || customer.displayName}
+                className={actionData?.errors?.displayName ? "border-red-300 focus-visible:ring-red-500" : ""}
+                placeholder="Tên thành viên"
+                maxLength={60}
+                required
+              />
+              {actionData?.errors?.displayName ? (
+                <p className="text-sm text-red-600">{actionData.errors.displayName}</p>
+              ) : (
+                <p className="text-xs text-zinc-400">Phải duy nhất. 1–60 ký tự.</p>
+              )}
+            </div>
 
-          <div className="flex items-center justify-end gap-4">
-            <Link
-              to={`/826264/customers/${customer._id}`}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Hủy
-            </Link>
-            <button
-              type="submit"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            >
-              Lưu thay đổi
-            </button>
-          </div>
-        </Form>
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor="note">Ghi chú</Label>
+              <Textarea
+                name="note"
+                id="note"
+                rows={4}
+                defaultValue={actionData?.values?.note || customer.note || ""}
+                placeholder="Ghi chú (tùy chọn) về thành viên..."
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button variant="outline" asChild>
+                <Link to={`/826264/customers/${customer._id}`}>Hủy</Link>
+              </Button>
+              <Button type="submit">Lưu thay đổi</Button>
+            </div>
+          </Form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

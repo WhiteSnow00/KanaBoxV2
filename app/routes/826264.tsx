@@ -4,97 +4,113 @@ import {
   useLocation,
 } from "@remix-run/react";
 import { useState } from "react";
+import {
+  LayoutDashboard,
+  UserPlus,
+  ExternalLink,
+  Menu,
+  X,
+} from "lucide-react";
+import { cn } from "~/lib/utils";
+import { Button } from "~/components/ui/button";
 
 function AdminNavigation() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const isActive = (path: string) => currentPath === path;
+  const navItems = [
+    {
+      to: "/826264",
+      label: "Bảng điều khiển",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      to: "/826264/customers/new",
+      label: "Thêm thành viên",
+      icon: UserPlus,
+      exact: true,
+    },
+  ];
+
+  const isActive = (path: string, exact: boolean) =>
+    exact ? currentPath === path : currentPath.startsWith(path);
 
   return (
-    <nav className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16">
-          <div className="flex items-center">
-            <Link to="/826264" className="text-lg sm:text-xl font-bold text-white">
-              Quản trị
+    <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-900">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-14 items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link to="/826264" className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-500">
+                <span className="text-xs font-bold text-white">K</span>
+              </div>
+              <span className="text-sm font-semibold text-white">Quản trị</span>
             </Link>
-            <div className="hidden md:flex ml-10 items-baseline space-x-4">
-              <Link
-                to="/826264"
-                className={`px-3 py-2 rounded-md text-sm font-medium ${isActive("/826264")
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                  }`}
-              >
-                Bảng điều khiển
-              </Link>
-              <Link
-                to="/826264/customers/new"
-                className={`px-3 py-2 rounded-md text-sm font-medium ${isActive("/826264/customers/new")
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                  }`}
-              >
-                Thêm thành viên
-              </Link>
+            <div className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    isActive(item.to, item.exact)
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              ))}
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center">
             <Link
               to="/"
-              className="text-sm text-gray-400 hover:text-white"
+              className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
             >
-              Xem trang công khai →
+              <ExternalLink className="h-3.5 w-3.5" />
+              Trang công khai
             </Link>
           </div>
-          <button
-            type="button"
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden text-zinc-400 hover:text-white hover:bg-zinc-800"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? (
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
         </div>
       </div>
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-700">
-          <div className="px-2 py-3 space-y-1 sm:px-3">
-            <Link
-              to="/826264"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`block px-3 py-2 rounded-md text-base font-medium ${isActive("/826264")
-                  ? "bg-gray-800 text-white"
-                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                }`}
-            >
-              Bảng điều khiển
-            </Link>
-            <Link
-              to="/826264/customers/new"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`block px-3 py-2 rounded-md text-base font-medium ${isActive("/826264/customers/new")
-                  ? "bg-gray-800 text-white"
-                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                }`}
-            >
-              Thêm thành viên
-            </Link>
+        <div className="md:hidden border-t border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
+          <div className="px-3 py-3 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  isActive(item.to, item.exact)
+                    ? "bg-zinc-800 text-white"
+                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            ))}
             <Link
               to="/"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-400 hover:text-white"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
             >
-              Xem trang công khai →
+              <ExternalLink className="h-4 w-4" />
+              Trang công khai
             </Link>
           </div>
         </div>
@@ -105,9 +121,9 @@ function AdminNavigation() {
 
 export default function AdminLayout() {
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-zinc-50">
       <AdminNavigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <Outlet />
       </main>
     </div>

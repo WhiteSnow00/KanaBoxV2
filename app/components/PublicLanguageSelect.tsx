@@ -1,4 +1,5 @@
 import { useSearchParams } from "@remix-run/react";
+import { Globe } from "lucide-react";
 import type { PublicLang } from "~/i18n/public";
 
 export default function PublicLanguageSelect({
@@ -16,9 +17,7 @@ export default function PublicLanguageSelect({
 
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor="public-lang" className="text-sm text-gray-700">
-        {label}
-      </label>
+      <Globe className="h-4 w-4 text-zinc-400" />
       <select
         id="public-lang"
         name="lang"
@@ -29,7 +28,7 @@ export default function PublicLanguageSelect({
           nextParams.set("lang", nextLang);
           setSearchParams(nextParams);
         }}
-        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-colors"
         aria-label={label}
       >
         <option value="vi">{optionVi}</option>

@@ -1,24 +1,27 @@
-
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { json, useLoaderData, Link, useFetcher } from "@remix-run/react";
+import { json, useLoaderData, useFetcher, Link } from "@remix-run/react";
 import { useState } from "react";
 import { ObjectId } from "mongodb";
-import { listCustomers, countCustomers, archiveCustomer } from "~/models/customer.server";
+import {
+  Users, CheckCircle, Clock, AlertTriangle, XCircle,
+  Search, UserPlus, TrendingUp,
+} from "lucide-react";
+import { countCustomers, listCustomers, archiveCustomer } from "~/models/customer.server";
 import {
   computeStatus,
+  listLatestPaymentsForAllCustomers,
   listPaymentsForRevenueWindow,
   computeMonthlyTotals,
-  listLatestPaymentsForAllCustomers,
 } from "~/models/payment.server";
-import {
-  getRevenueBucketRange,
-  getMonthBucket,
-  getTodayDateOnly,
-} from "~/utils/date";
+import { getTodayDateOnly, getMonthBucket, getRevenueBucketRange } from "~/utils/date";
 import CustomerTable from "~/components/CustomerTable";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { cn } from "~/lib/utils";
 
 export const meta: MetaFunction = () => [
-  { title: "Bảng điều khiển (Quản trị) - Kana Box V2" },
+  { title: "Bảng điều khiển - Quản trị - Kana Box V2" },
 ];
 
 interface MonthlyTotal {
@@ -28,15 +31,11 @@ interface MonthlyTotal {
   convertedVnd: number;
 }
 
-function generateMonthBuckets(startBucket: string, endBucket: string): string[] {
+function generateMonthBuckets(start: string, end: string): string[] {
   const buckets: string[] = [];
-  const [startYear, startMonth] = startBucket.split("-").map(Number);
-  const [endYear, endMonth] = endBucket.split("-").map(Number);
-
-  let y = startYear;
-  let m = startMonth;
-
-  while (y < endYear || (y === endYear && m <= endMonth)) {
+  let [y, m] = start.split("-").map(Number);
+  const [ey, em] = end.split("-").map(Number);
+  while (y < ey || (y === ey && m <= em)) {
     buckets.push(`${y}-${String(m).padStart(2, "0")}`);
     m++;
     if (m > 12) {
@@ -44,7 +43,6 @@ function generateMonthBuckets(startBucket: string, endBucket: string): string[] 
       y++;
     }
   }
-
   return buckets;
 }
 
@@ -131,37 +129,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   });
 }
 
-function StatusCard({
-  title,
-  count,
-  bgClass,
-  borderClass,
-  textClass,
-  onClick,
-  isSelected,
-}: {
-  title: string;
-  count: number;
-  bgClass: string;
-  borderClass: string;
-  textClass: string;
-  onClick?: () => void;
-  isSelected?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg border-2 ${borderClass} ${bgClass} p-4 sm:p-6 text-left w-full transition-all cursor-pointer ${isSelected ? "ring-2 ring-offset-2 ring-blue-500 scale-[1.02]" : "hover:opacity-80"
-        }`}
-    >
-      <p className={`text-xs sm:text-sm font-medium ${textClass}`}>{title}</p>
-      <p className={`mt-1 text-2xl sm:text-3xl font-semibold ${textClass}`}>
-        {count.toLocaleString()}
-      </p>
-    </button>
-  );
-}
+const statusCards = [
+  { key: "active" as const, label: "Còn hạn", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-400" },
+  { key: "due" as const, label: "Sắp đến hạn", icon: Clock, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", ring: "ring-amber-400" },
+  { key: "grace" as const, label: "Quá hạn (cao su)", icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", ring: "ring-orange-400" },
+  { key: "expired" as const, label: "Hết hạn", icon: XCircle, color: "text-red-600", bg: "bg-red-50", border: "border-red-200", ring: "ring-red-400" },
+];
 
 function formatMonth(monthBucket: string): string {
   const [year, month] = monthBucket.split("-");
@@ -193,152 +166,127 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-          Bảng điều khiển (Quản trị)
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Quản lý đăng ký và xem báo cáo doanh thu
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Bảng điều khiển</h1>
+        <p className="mt-1 text-sm text-zinc-500">Quản lý đăng ký và xem báo cáo doanh thu</p>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5">
-        <StatusCard
-          title="Tổng số thành viên"
-          count={totalCustomers}
-          bgClass="bg-gray-100"
-          borderClass="border-gray-400"
-          textClass="text-gray-900"
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <button
+          type="button"
           onClick={() => setStatusFilter(null)}
-          isSelected={statusFilter === null}
-        />
-        <StatusCard
-          title="Còn hạn"
-          count={statusCounts.active}
-          bgClass="bg-green-100"
-          borderClass="border-green-600"
-          textClass="text-green-900"
-          onClick={() => setStatusFilter(statusFilter === "active" ? null : "active")}
-          isSelected={statusFilter === "active"}
-        />
-        <StatusCard
-          title="Sắp đến hạn"
-          count={statusCounts.due}
-          bgClass="bg-yellow-100"
-          borderClass="border-yellow-600"
-          textClass="text-yellow-900"
-          onClick={() => setStatusFilter(statusFilter === "due" ? null : "due")}
-          isSelected={statusFilter === "due"}
-        />
-        <StatusCard
-          title="Quá hạn (cao su)"
-          count={statusCounts.grace}
-          bgClass="bg-orange-100"
-          borderClass="border-orange-600"
-          textClass="text-orange-900"
-          onClick={() => setStatusFilter(statusFilter === "grace" ? null : "grace")}
-          isSelected={statusFilter === "grace"}
-        />
-        <StatusCard
-          title="Hết hạn"
-          count={statusCounts.expired}
-          bgClass="bg-red-100"
-          borderClass="border-red-600"
-          textClass="text-red-900"
-          onClick={() => setStatusFilter(statusFilter === "expired" ? null : "expired")}
-          isSelected={statusFilter === "expired"}
-        />
+          className={cn(
+            "rounded-xl border bg-white p-4 text-left transition-all",
+            statusFilter === null
+              ? "border-indigo-300 ring-2 ring-indigo-200 shadow-sm"
+              : "border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
+          )}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="h-4 w-4 text-indigo-500" />
+            <span className="text-xs font-medium text-zinc-500">Tổng thành viên</span>
+          </div>
+          <p className="text-2xl font-semibold text-zinc-900 tabular-nums">{totalCustomers}</p>
+        </button>
+        {statusCards.map(({ key, label, icon: Icon, color, bg, border, ring }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setStatusFilter(statusFilter === key ? null : key)}
+            className={cn(
+              "rounded-xl border p-4 text-left transition-all",
+              bg,
+              statusFilter === key
+                ? `${border} ring-2 ${ring} shadow-sm`
+                : `${border} hover:shadow-sm`
+            )}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Icon className={cn("h-4 w-4", color)} />
+              <span className={cn("text-xs font-medium", color)}>{label}</span>
+            </div>
+            <p className={cn("text-2xl font-semibold tabular-nums", color)}>
+              {statusCounts[key]}
+            </p>
+          </button>
+        ))}
       </div>
-      <div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h2 className="text-lg font-medium text-gray-900">
-            Tất cả thành viên ({filteredCustomers.length})
+
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-lg font-semibold text-zinc-900">
+            Thành viên
+            <span className="ml-2 text-sm font-normal text-zinc-400">({filteredCustomers.length})</span>
           </h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm..."
-              className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-            />
-            <Link
-              to="/826264/customers/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
-            >
-              Thêm thành viên
-            </Link>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm kiếm..."
+                className="pl-9 w-full sm:w-48"
+              />
+            </div>
+            <Button asChild>
+              <Link to="/826264/customers/new">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Thêm thành viên
+              </Link>
+            </Button>
           </div>
         </div>
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <div className="inline-block min-w-full align-middle px-4 sm:px-0">
-            <CustomerTable
-              customers={filteredCustomers}
-              basePath="/826264/customers"
-              showAdminActions={true}
-              onArchive={handleArchive}
-            />
-          </div>
-        </div>
+        <CustomerTable
+          customers={filteredCustomers}
+          basePath="/826264/customers"
+          showAdminActions={true}
+          onArchive={handleArchive}
+        />
       </div>
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">
-            Doanh thu theo tháng
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Doanh thu tính theo chu kỳ ngày 6 đến ngày 5 tháng sau
-          </p>
-        </div>
-        <div className="p-4 sm:p-6">
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <div className="inline-block min-w-full align-middle px-4 sm:px-0">
-              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tháng
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tổng VND
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tổng USD
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tổng VND (Quy đổi)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {monthlyTotals.map((month) => (
-                      <tr key={month.month}>
-                        <td className="px-4 sm:px-6 py-4 text-sm font-medium whitespace-nowrap">
-                          {formatMonth(month.month)}
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 text-sm text-right whitespace-nowrap">
-                          {month.vnd > 0
-                            ? `${month.vnd.toLocaleString("vi-VN")} ₫`
-                            : "-"}
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 text-sm text-right whitespace-nowrap">
-                          {month.usd > 0 ? `$${month.usd.toFixed(2)}` : "-"}
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 text-sm text-right font-medium text-blue-700 whitespace-nowrap">
-                          {month.convertedVnd > 0
-                            ? `${month.convertedVnd.toLocaleString("vi-VN")} ₫`
-                            : "-"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-indigo-500" />
+            <div>
+              <CardTitle className="text-base">Doanh thu theo tháng</CardTitle>
+              <p className="text-xs text-zinc-400 mt-0.5">Chu kỳ ngày 6 → ngày 5 tháng sau</p>
             </div>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-xl border border-zinc-200 overflow-hidden">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-zinc-100 bg-zinc-50/50">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Tháng</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 uppercase tracking-wider">VND</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 uppercase tracking-wider">USD</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 uppercase tracking-wider">Tổng (quy đổi VND)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {monthlyTotals.map((month) => (
+                  <tr key={month.month} className="hover:bg-zinc-50/50 transition-colors">
+                    <td className="px-4 py-3 text-sm font-medium text-zinc-900 whitespace-nowrap">{formatMonth(month.month)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-zinc-600 whitespace-nowrap tabular-nums">
+                      {month.vnd > 0 ? `${month.vnd.toLocaleString("vi-VN")} ₫` : <span className="text-zinc-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-zinc-600 whitespace-nowrap tabular-nums">
+                      {month.usd > 0 ? `$${month.usd.toFixed(2)}` : <span className="text-zinc-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-indigo-600 whitespace-nowrap tabular-nums">
+                      {month.convertedVnd > 0 ? `${month.convertedVnd.toLocaleString("vi-VN")} ₫` : <span className="text-zinc-300">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
