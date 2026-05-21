@@ -15,10 +15,13 @@ let clientPromise: Promise<MongoClient>;
 
 if (!global.__mongoClientPromise) {
   const client = new MongoClient(MONGODB_URI, {
-    maxPoolSize: 10,
-    minPoolSize: 1,
+    maxPoolSize: 50,
+    minPoolSize: 5,
+    connectTimeoutMS: 10000,
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
+    retryWrites: true,
+    retryReads: true,
   });
   global.__mongoClientPromise = client.connect();
 }

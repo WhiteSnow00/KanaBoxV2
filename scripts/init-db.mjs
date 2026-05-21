@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { MongoClient } from "mongodb";
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -23,6 +24,16 @@ const DESIRED_INDEXES = {
             key: { customerId: 1, paidDate: -1 },
             unique: false,
         },
+        {
+            name: "ix_payments_paidDate_isVoided",
+            key: { paidDate: 1, isVoided: 1 },
+            unique: false,
+        },
+        {
+            name: "ix_payments_isVoided_paidDate",
+            key: { isVoided: 1, paidDate: -1 },
+            unique: false,
+        },
     ],
 };
 
@@ -43,14 +54,8 @@ async function ensureIndex(collection, desired) {
             return;
         }
 
-        console.log(`  [FIX] Index "${desired.name}" exists but is incorrect. Dropping and recreating...`);
-        await collection.dropIndex(desired.name);
-    }
-
-    const oldUnique = existing.find((idx) => idx.name === "ix_customers_displayName_unique");
-    if (oldUnique) {
-        console.log(`  [MIGRATE] Dropping old index "ix_customers_displayName_unique"...`);
-        await collection.dropIndex("ix_customers_displayName_unique");
+        console.log(`  [WARN] Index "${desired.name}" exists but differs. Leaving it unchanged.`);
+        return;
     }
 
     console.log(`  [CREATE] Creating index "${desired.name}"...`);

@@ -84,10 +84,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 const statusCardConfig = [
-  { key: "active", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-400" },
-  { key: "due", icon: Clock, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", ring: "ring-amber-400" },
-  { key: "grace", icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200", ring: "ring-orange-400" },
-  { key: "expired", icon: XCircle, color: "text-red-600", bg: "bg-red-50", border: "border-red-200", ring: "ring-red-400" },
+  { key: "active", icon: CheckCircle, color: "text-emerald-600", dot: "bg-emerald-500", bg: "bg-emerald-50", border: "border-emerald-200", ring: "ring-emerald-400" },
+  { key: "due", icon: Clock, color: "text-amber-600", dot: "bg-amber-500", bg: "bg-amber-50", border: "border-amber-200", ring: "ring-amber-400" },
+  { key: "grace", icon: AlertTriangle, color: "text-orange-600", dot: "bg-orange-500", bg: "bg-orange-50", border: "border-orange-200", ring: "ring-orange-400" },
+  { key: "expired", icon: XCircle, color: "text-red-600", dot: "bg-red-500", bg: "bg-red-50", border: "border-red-200", ring: "ring-red-400" },
 ] as const;
 
 export default function PublicHome() {
@@ -113,6 +113,18 @@ export default function PublicHome() {
     const matchesStatus = statusFilter === null || item.status.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+  const trimmedSearch = searchTerm.trim();
+  const isFilteredEmpty = customers.length > 0 && filteredCustomers.length === 0;
+  const filteredEmptyTitle = trimmedSearch
+    ? lang === "en"
+      ? `No members match "${trimmedSearch}"`
+      : `Không có thành viên khớp "${trimmedSearch}"`
+    : lang === "en"
+      ? "No members with this status"
+      : "Không có thành viên ở trạng thái này";
+  const filteredEmptySubtitle = lang === "en"
+    ? "Try another search or status filter."
+    : "Thử đổi từ khóa hoặc bộ lọc trạng thái.";
 
   return (
     <div className="space-y-6">
@@ -127,6 +139,16 @@ export default function PublicHome() {
           optionEn={strings.languageOptions.en}
         />
       </PageHeader>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-500 shadow-sm">
+        <span className="font-medium text-zinc-600">{strings.statusLegendLabel}</span>
+        {statusCardConfig.map(({ key, dot }) => (
+          <span key={key} className="inline-flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
+            {strings.statusLabels[key]}
+          </span>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard
@@ -170,6 +192,9 @@ export default function PublicHome() {
         showAdminActions={false}
         readOnly={true}
         i18n={strings.customerTable}
+        isFilteredEmpty={isFilteredEmpty}
+        filteredEmptyTitle={filteredEmptyTitle}
+        filteredEmptySubtitle={filteredEmptySubtitle}
       />
     </div>
   );

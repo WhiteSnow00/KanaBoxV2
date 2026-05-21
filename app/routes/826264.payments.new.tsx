@@ -19,6 +19,7 @@ import {
   calculateRecommendedMonths,
   BASE_PRICE_VND,
   BASE_PRICE_USD,
+  computeStatus,
 } from "~/models/subscriptionStatus";
 import { getTodayDateOnly } from "~/utils/date";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -52,6 +53,10 @@ interface LoaderData {
     name: string;
   }>;
   defaultPaidDate: string;
+  currentSubscription: {
+    expiry: string;
+    statusText: string;
+  } | null;
   basePriceVnd: number;
   basePriceUsd: number;
 }
@@ -75,12 +80,28 @@ interface ActionData {
   recommendedMonths?: number;
 }
 
+function formatStatusContext(status: ReturnType<typeof computeStatus>): string {
+  if (status.daysToEnd !== null) {
+    if (status.daysToEnd === 0) {
+      return `${status.label} (hôm nay)`;
+    }
+    return `${status.label} (${status.daysToEnd} ngày còn lại)`;
+  }
+
+  if (status.daysPastEnd !== null) {
+    return `${status.label} (${status.daysPastEnd} ngày quá hạn)`;
+  }
+
+  return status.label;
+}
+
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const customerId = url.searchParams.get("customerId");
 
   let customer = null;
   let defaultPaidDate = getTodayDateOnly();
+  let currentSubscription: LoaderData["currentSubscription"] = null;
 
   if (customerId && ObjectId.isValid(customerId)) {
     const c = await getCustomerById(customerId);
@@ -92,6 +113,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
       const latestPayment = await getLatestPaymentForCustomer(customerId);
       if (latestPayment) {
         defaultPaidDate = latestPayment.endDate;
+        const status = computeStatus(latestPayment.endDate);
+        currentSubscription = {
+          expiry: latestPayment.endDate,
+          statusText: formatStatusContext(status),
+        };
       }
     }
   }
@@ -105,6 +131,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       name: c.displayName,
     })),
     defaultPaidDate,
+    currentSubscription,
     basePriceVnd: BASE_PRICE_VND,
     basePriceUsd: BASE_PRICE_USD,
   });
@@ -205,7 +232,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function AdminAddPayment() {
-  const { customer, customers, defaultPaidDate, basePriceVnd, basePriceUsd } =
+  const { customer, customers, defaultPaidDate, currentSubscription, basePriceVnd, basePriceUsd } =
     useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
 
@@ -279,6 +306,19 @@ export default function AdminAddPayment() {
                 </select>
               )}
               <FormMessage error={actionData?.errors?.customerId} />
+              {customer && (
+                <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+                  {currentSubscription ? (
+                    <>
+                      Hết hạn hiện tại: <span className="font-medium tabular-nums">{currentSubscription.expiry}</span>
+                      <span className="mx-1 text-indigo-300">·</span>
+                      Trạng thái: <span className="font-medium">{currentSubscription.statusText}</span>
+                    </>
+                  ) : (
+                    "Thành viên này chưa có thanh toán hiện tại."
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

@@ -21,6 +21,8 @@ export interface CustomerWithStatus {
     name: string;
     note?: string;
     isPublicHidden?: boolean;
+    renewalCancelled?: boolean;
+    cancelledAt?: string | null;
   };
   latestPayment: {
     _id: string;
@@ -35,6 +37,8 @@ export interface CustomerWithStatus {
     status: "active" | "due" | "grace" | "expired" | "none";
     className: string;
     label: string;
+    daysToEnd?: number | null;
+    daysPastEnd?: number | null;
   };
 }
 
@@ -62,6 +66,9 @@ interface CustomerTableProps {
   readOnly?: boolean;
   i18n?: CustomerTableI18n;
   onArchive?: (customerId: string) => void;
+  isFilteredEmpty?: boolean;
+  filteredEmptyTitle?: string;
+  filteredEmptySubtitle?: string;
 }
 
 const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
@@ -94,6 +101,9 @@ export default function CustomerTable({
   readOnly = false,
   i18n,
   onArchive,
+  isFilteredEmpty = false,
+  filteredEmptyTitle,
+  filteredEmptySubtitle,
 }: CustomerTableProps) {
   const [archiveTarget, setArchiveTarget] = useState<{ id: string; name: string } | null>(null);
 
@@ -116,14 +126,17 @@ export default function CustomerTable({
     } satisfies CustomerTableI18n);
 
   if (customers.length === 0) {
+    const emptyTitle = isFilteredEmpty && filteredEmptyTitle ? filteredEmptyTitle : t.emptyTitle;
+    const emptySubtitle = isFilteredEmpty ? filteredEmptySubtitle : t.emptySubtitle;
+
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 mb-4">
           <Eye className="h-6 w-6 text-zinc-400" />
         </div>
-        <p className="text-base font-medium text-zinc-700">{t.emptyTitle}</p>
-        {showAdminActions && t.emptySubtitle && (
-          <p className="mt-1 text-sm text-zinc-400">{t.emptySubtitle}</p>
+        <p className="text-base font-medium text-zinc-700">{emptyTitle}</p>
+        {emptySubtitle && (
+          <p className="mt-1 text-sm text-zinc-400">{emptySubtitle}</p>
         )}
       </div>
     );
@@ -177,7 +190,12 @@ export default function CustomerTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <Badge variant={statusVariant[status.status] || "none"}>{status.label}</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={statusVariant[status.status] || "none"}>{status.label}</Badge>
+                      {customer.renewalCancelled && (
+                        <Badge variant="cancelled">Đã hủy gia hạn</Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {latestPayment ? (
@@ -250,7 +268,18 @@ export default function CustomerTable({
                   )}
                   {!readOnly && customer.isPublicHidden && <Badge variant="hidden">Ẩn</Badge>}
                 </div>
-                <Badge variant={statusVariant[status.status] || "none"}>{status.label}</Badge>
+                {customer.note && (
+                  <p className="mt-1 text-xs text-zinc-400">{customer.note}</p>
+                )}
+                {latestPayment?.note && (
+                  <p className="mt-0.5 text-xs text-zinc-400">{latestPayment.note}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={statusVariant[status.status] || "none"}>{status.label}</Badge>
+                  {customer.renewalCancelled && (
+                    <Badge variant="cancelled">Đã hủy gia hạn</Badge>
+                  )}
+                </div>
               </div>
               {!readOnly && (
                 <Link to={`${basePath}/${customer._id}`}>

@@ -7,6 +7,7 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   UserPlus,
+  Archive,
   ExternalLink,
   Menu,
   X,
@@ -30,6 +31,12 @@ function AdminNavigation() {
       to: "/826264/customers/new",
       label: "Thêm thành viên",
       icon: UserPlus,
+      exact: true,
+    },
+    {
+      to: "/826264/customers/archived",
+      label: "Thành viên lưu trữ",
+      icon: Archive,
       exact: true,
     },
   ];
