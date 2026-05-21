@@ -1,14 +1,46 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
+import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { useEffect, useState } from "react";
 import { ObjectId } from "mongodb";
-import { Archive, RefreshCw } from "lucide-react";
-import { listCustomers, unarchiveCustomer } from "~/models/customer.server";
-import { computeStatus, listLatestPaymentsForAllCustomers } from "~/models/payment.server";
+import { Archive, CreditCard, RefreshCw } from "lucide-react";
+import { getCustomerById, listCustomers, unarchiveCustomer } from "~/models/customer.server";
+import { createPayment, listLatestPaymentsForAllCustomers } from "~/models/payment.server";
+import {
+  BASE_PRICE_USD,
+  BASE_PRICE_VND,
+  calculateRecommendedMonths,
+  computeStatus,
+  type Currency,
+} from "~/models/subscriptionStatus";
+import { getTodayDateOnly } from "~/utils/date";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { Breadcrumb, EmptyState, PageHeader, formatCurrency } from "~/components/shared";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
+import {
+  AmountPresetChips,
+  Breadcrumb,
+  CurrencyAmountInput,
+  CurrencySelect,
+  EmptyState,
+  FormErrorBanner,
+  FormMessage,
+  MonthsRecommendation,
+  PageHeader,
+  formatCurrency,
+} from "~/components/shared";
 import { cn } from "~/lib/utils";
 
 export const meta: MetaFunction = () => [
@@ -22,6 +54,26 @@ const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "no
   expired: "expired",
   none: "none",
 };
+
+interface ActionData {
+  error?: string;
+  errors?: {
+    customerId?: string;
+    amount?: string;
+    months?: string;
+    paidDate?: string;
+    form?: string;
+  };
+  values?: {
+    customerId: string;
+    currency: string;
+    amount: string;
+    months: string;
+    paidDate: string;
+    note: string;
+  };
+  recommendedMonths?: number;
+}
 
 export async function loader({}: LoaderFunctionArgs) {
   const [customers, latestPaymentsMap] = await Promise.all([
@@ -63,21 +115,100 @@ export async function action({ request }: ActionFunctionArgs) {
   const intent = String(formData.get("intent") || "");
   const customerId = String(formData.get("customerId") || "");
 
-  if (intent !== "unarchive") {
-    return json({ error: "Thao tác không hợp lệ" }, { status: 400 });
+  if (intent !== "unarchive" && intent !== "unarchiveWithPayment") {
+    return json<ActionData>({ error: "Thao tác không hợp lệ" }, { status: 400 });
   }
 
   if (!customerId || !ObjectId.isValid(customerId)) {
-    return json({ error: "ID thành viên không hợp lệ" }, { status: 400 });
+    return json<ActionData>({ error: "ID thành viên không hợp lệ" }, { status: 400 });
+  }
+
+  if (intent === "unarchive") {
+    try {
+      await unarchiveCustomer(customerId);
+      return redirect("/826264/customers/archived");
+    } catch (error) {
+      console.error("Error restoring archived customer:", error);
+      return json<ActionData>(
+        { error: "Khôi phục thành viên thất bại. Vui lòng kiểm tra tên trùng và thử lại." },
+        { status: 500 }
+      );
+    }
+  }
+
+  const currencyRaw = String(formData.get("currency") || "VND");
+  const currency: Currency = currencyRaw === "USD" ? "USD" : "VND";
+  const amountStr = String(formData.get("amount") || "").trim();
+  const monthsStr = String(formData.get("months") || "").trim();
+  const paidDate = String(formData.get("paidDate") || "").trim();
+  const note = String(formData.get("note") || "").trim();
+  const errors: ActionData["errors"] = {};
+
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    errors.customerId = "Không tìm thấy thành viên";
+  }
+
+  const amount = parseFloat(amountStr);
+  if (!amountStr || isNaN(amount) || amount <= 0) {
+    errors.amount = "Số tiền phải là số dương";
+  } else if (currency === "VND" && !Number.isInteger(amount)) {
+    errors.amount = "Số tiền VND phải là số nguyên (không có phần thập phân)";
+  }
+
+  const months = parseInt(monthsStr, 10);
+  if (!monthsStr || isNaN(months) || months < 1) {
+    errors.months = "Số tháng tối thiểu là 1";
+  }
+
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!paidDate || !dateRegex.test(paidDate)) {
+    errors.paidDate = "Vui lòng nhập ngày hợp lệ (YYYY-MM-DD)";
+  }
+
+  const recommendedMonths =
+    amount > 0 && !isNaN(amount)
+      ? calculateRecommendedMonths(amount, currency)
+      : 1;
+
+  const values = {
+    customerId,
+    currency,
+    amount: amountStr,
+    months: monthsStr,
+    paidDate,
+    note,
+  };
+
+  if (Object.keys(errors).length > 0) {
+    return json<ActionData>(
+      { errors, values, recommendedMonths },
+      { status: 400 }
+    );
   }
 
   try {
-    await unarchiveCustomer(customerId);
-    return redirect("/826264/customers/archived");
+    await unarchiveCustomer(customerId, note || undefined);
+    await createPayment({
+      customerId,
+      paidDate,
+      currency,
+      amount,
+      months,
+      note: note || undefined,
+    });
+
+    return redirect(`/826264/customers/${customerId}`);
   } catch (error) {
-    console.error("Error restoring archived customer:", error);
-    return json(
-      { error: "Khôi phục thành viên thất bại. Vui lòng kiểm tra tên trùng và thử lại." },
+    console.error("Error restoring archived customer with payment:", error);
+    return json<ActionData>(
+      {
+        errors: {
+          form: "Khôi phục và tạo thanh toán thất bại. Vui lòng thử lại.",
+        },
+        values,
+        recommendedMonths,
+      },
       { status: 500 }
     );
   }
@@ -91,9 +222,245 @@ function formatArchivedAt(value: string | null): string {
   return new Date(value).toLocaleDateString("vi-VN");
 }
 
+type RestoreTarget = {
+  id: string;
+  name: string;
+};
+
+function getRestoreTargetById(
+  customers: Array<{ customer: { _id: string; name: string } }>,
+  customerId: string | undefined
+): RestoreTarget | null {
+  if (!customerId) {
+    return null;
+  }
+
+  const match = customers.find((item) => item.customer._id === customerId);
+  return match ? { id: match.customer._id, name: match.customer.name } : null;
+}
+
+function isCurrency(value: string | undefined): value is Currency {
+  return value === "VND" || value === "USD";
+}
+
+function getInitialAmount(currency: Currency, rawAmount?: string): number {
+  const parsed = rawAmount ? parseFloat(rawAmount) : Number.NaN;
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  return currency === "USD" ? BASE_PRICE_USD : BASE_PRICE_VND;
+}
+
+function RestoreActions({
+  customer,
+  onRestoreWithPayment,
+}: {
+  customer: RestoreTarget;
+  onRestoreWithPayment: (target: RestoreTarget) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <Button
+        type="button"
+        size="sm"
+        onClick={() => onRestoreWithPayment(customer)}
+      >
+        <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+        Khôi phục + Thanh toán
+      </Button>
+      <Form method="post">
+        <input type="hidden" name="intent" value="unarchive" />
+        <input type="hidden" name="customerId" value={customer.id} />
+        <Button type="submit" variant="outline" size="sm" className="w-full sm:w-auto">
+          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+          Khôi phục
+        </Button>
+      </Form>
+    </div>
+  );
+}
+
+function RestoreWithPaymentDialog({
+  target,
+  actionData,
+  onOpenChange,
+}: {
+  target: RestoreTarget | null;
+  actionData: ActionData | undefined;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const navigation = useNavigation();
+  const actionValues = actionData?.values;
+  const targetValues = target && actionValues?.customerId === target.id
+    ? actionValues
+    : undefined;
+  const fieldErrors = targetValues ? actionData?.errors : undefined;
+  const initialCurrency = isCurrency(targetValues?.currency) ? targetValues.currency : "VND";
+  const [currency, setCurrency] = useState<Currency>(initialCurrency);
+  const [amount, setAmount] = useState(() => getInitialAmount(initialCurrency, targetValues?.amount));
+  const [monthsManuallyEdited, setMonthsManuallyEdited] = useState(false);
+  const recommendedMonths = calculateRecommendedMonths(amount, currency);
+  const [months, setMonths] = useState(
+    parseInt(targetValues?.months || String(recommendedMonths), 10) || 1
+  );
+  const isSubmitting =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "unarchiveWithPayment";
+
+  useEffect(() => {
+    if (!target) {
+      return;
+    }
+
+    const nextCurrency = isCurrency(targetValues?.currency) ? targetValues.currency : "VND";
+    const nextAmount = getInitialAmount(nextCurrency, targetValues?.amount);
+    const nextRecommendedMonths = calculateRecommendedMonths(nextAmount, nextCurrency);
+
+    setCurrency(nextCurrency);
+    setAmount(nextAmount);
+    setMonths(parseInt(targetValues?.months || String(nextRecommendedMonths), 10) || 1);
+    setMonthsManuallyEdited(false);
+  }, [target, targetValues?.amount, targetValues?.currency, targetValues?.months]);
+
+  const handleAmountPreset = (preset: number) => {
+    setAmount(preset);
+    if (!monthsManuallyEdited) {
+      setMonths(calculateRecommendedMonths(preset, currency));
+    }
+  };
+
+  return (
+    <AlertDialog open={!!target} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Khôi phục + Thanh toán</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tạo thanh toán mới khi khôi phục &quot;{target?.name}&quot;.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <Form method="post" className="space-y-4">
+          <input type="hidden" name="intent" value="unarchiveWithPayment" />
+          <input type="hidden" name="customerId" value={target?.id || ""} />
+
+          {fieldErrors?.form && <FormErrorBanner message={fieldErrors.form} />}
+          <FormMessage error={fieldErrors?.customerId} />
+
+          <div className="space-y-2">
+            <Label htmlFor="restoreCurrency">
+              Tiền tệ <span className="text-red-500">*</span>
+            </Label>
+            <CurrencySelect
+              name="currency"
+              id="restoreCurrency"
+              value={currency}
+              onChange={setCurrency}
+            />
+            <FormMessage hint={`Giá cơ bản: ${BASE_PRICE_VND.toLocaleString("vi-VN")} ₫/tháng hoặc $${BASE_PRICE_USD}/tháng`} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="restoreAmount">
+              Số tiền <span className="text-red-500">*</span>
+            </Label>
+            {currency === "VND" && (
+              <AmountPresetChips currentAmount={amount} onSelect={handleAmountPreset} />
+            )}
+            <CurrencyAmountInput
+              currency={currency}
+              name="amount"
+              id="restoreAmount"
+              value={amount || ""}
+              onChange={(event) => {
+                const nextAmount = parseFloat(event.target.value) || 0;
+                setAmount(nextAmount);
+                if (!monthsManuallyEdited) {
+                  setMonths(calculateRecommendedMonths(nextAmount, currency));
+                }
+              }}
+              error={!!fieldErrors?.amount}
+            />
+            <FormMessage error={fieldErrors?.amount} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="restoreMonths">
+              Số tháng <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="number"
+              name="months"
+              id="restoreMonths"
+              min="1"
+              step="1"
+              value={months}
+              onChange={(event) => {
+                const nextMonths = parseInt(event.target.value, 10) || 1;
+                setMonths(nextMonths);
+                setMonthsManuallyEdited(true);
+              }}
+              className={fieldErrors?.months ? "border-red-300 focus-visible:ring-red-500" : ""}
+              required
+            />
+            <MonthsRecommendation months={recommendedMonths} />
+            <FormMessage error={fieldErrors?.months} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="restorePaidDate">
+              Ngày thanh toán <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="date"
+              name="paidDate"
+              id="restorePaidDate"
+              defaultValue={targetValues?.paidDate || getTodayDateOnly()}
+              className={fieldErrors?.paidDate ? "border-red-300 focus-visible:ring-red-500" : ""}
+              required
+            />
+            <FormMessage
+              error={fieldErrors?.paidDate}
+              hint={fieldErrors?.paidDate ? undefined : "Ngày hết hạn = ngày thanh toán + số tháng (theo lịch)"}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="restoreNote">Ghi chú</Label>
+            <Textarea
+              name="note"
+              id="restoreNote"
+              rows={3}
+              defaultValue={targetValues?.note || ""}
+              placeholder="Ghi chú (tùy chọn) về lần khôi phục..."
+            />
+          </div>
+
+          <AlertDialogFooter className="gap-2 sm:space-x-0">
+            <AlertDialogCancel type="button">Hủy</AlertDialogCancel>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Đang lưu..." : "Khôi phục và tạo thanh toán"}
+            </Button>
+          </AlertDialogFooter>
+        </Form>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export default function ArchivedCustomers() {
   const { customers } = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
+  const actionData = useActionData<ActionData>();
+  const [restoreTarget, setRestoreTarget] = useState<RestoreTarget | null>(() =>
+    getRestoreTargetById(customers, actionData?.values?.customerId)
+  );
+
+  useEffect(() => {
+    const nextTarget = getRestoreTargetById(customers, actionData?.values?.customerId);
+    if (nextTarget && actionData?.errors) {
+      setRestoreTarget(nextTarget);
+    }
+  }, [actionData?.errors, actionData?.values?.customerId, customers]);
 
   return (
     <div className="space-y-6">
@@ -168,14 +535,10 @@ export default function ArchivedCustomers() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-right text-sm">
-                            <Form method="post">
-                              <input type="hidden" name="intent" value="unarchive" />
-                              <input type="hidden" name="customerId" value={customer._id} />
-                              <Button type="submit" variant="outline" size="sm">
-                                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                                Khôi phục
-                              </Button>
-                            </Form>
+                            <RestoreActions
+                              customer={{ id: customer._id, name: customer.name }}
+                              onRestoreWithPayment={setRestoreTarget}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -224,14 +587,12 @@ export default function ArchivedCustomers() {
                       </div>
                     </div>
 
-                    <Form method="post" className="mt-3 border-t border-zinc-100 pt-3">
-                      <input type="hidden" name="intent" value="unarchive" />
-                      <input type="hidden" name="customerId" value={customer._id} />
-                      <Button type="submit" variant="outline" size="sm" className="w-full">
-                        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                        Khôi phục
-                      </Button>
-                    </Form>
+                    <div className="mt-3 border-t border-zinc-100 pt-3">
+                      <RestoreActions
+                        customer={{ id: customer._id, name: customer.name }}
+                        onRestoreWithPayment={setRestoreTarget}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -239,6 +600,16 @@ export default function ArchivedCustomers() {
           )}
         </CardContent>
       </Card>
+
+      <RestoreWithPaymentDialog
+        target={restoreTarget}
+        actionData={actionData}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRestoreTarget(null);
+          }
+        }}
+      />
     </div>
   );
 }

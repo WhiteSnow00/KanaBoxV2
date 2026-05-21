@@ -25,7 +25,7 @@ function AdminNavigation() {
       to: "/826264",
       label: "Bảng điều khiển",
       icon: LayoutDashboard,
-      exact: true,
+      exact: false,
     },
     {
       to: "/826264/customers/new",

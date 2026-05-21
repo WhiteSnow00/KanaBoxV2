@@ -227,15 +227,15 @@ export default function AdminCustomerDetail() {
                       Bạn có chắc muốn lưu trữ &quot;{customer.name}&quot;? Họ sẽ bị ẩn khỏi bảng nhưng dữ liệu thanh toán vẫn được giữ lại.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Hủy</AlertDialogCancel>
-                    <Form method="post" className="contents">
-                      <input type="hidden" name="intent" value="deleteCustomer" />
-                      <AlertDialogAction type="submit" className="bg-red-600 hover:bg-red-700">
+                  <Form method="post" className="contents">
+                    <input type="hidden" name="intent" value="deleteCustomer" />
+                    <AlertDialogFooter>
+                      <AlertDialogCancel type="button">Hủy</AlertDialogCancel>
+                      <Button type="submit" variant="destructive" className="bg-red-600 hover:bg-red-700">
                         Lưu trữ
-                      </AlertDialogAction>
-                    </Form>
-                  </AlertDialogFooter>
+                      </Button>
+                    </AlertDialogFooter>
+                  </Form>
                 </AlertDialogContent>
               </AlertDialog>
             </div>

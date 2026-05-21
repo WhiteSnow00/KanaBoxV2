@@ -288,6 +288,7 @@ export async function archiveCustomer(id: string): Promise<Customer | null> {
   return result;
 }
 
+/** @deprecated Use archiveCustomer instead. This soft-archives and never deletes from the DB. */
 export async function deleteCustomer(id: string): Promise<boolean> {
   if (!ObjectId.isValid(id)) {
     return false;
