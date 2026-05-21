@@ -1,3 +1,5 @@
+import type { ActionFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Link,
   Outlet,
@@ -12,14 +14,33 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { ObjectId } from "mongodb";
+import { archiveCustomer } from "~/models/customer.server";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const intent = String(formData.get("intent") || "");
+  if (intent === "archive") {
+    const customerId = String(formData.get("customerId") || "");
+    if (!customerId || !ObjectId.isValid(customerId)) {
+      return json({ ok: false, error: "ID thành viên không hợp lệ" }, { status: 400 });
+    }
+    try {
+      await archiveCustomer(customerId);
+      return json({ ok: true, customerId });
+    } catch (error) {
+      console.error("Error archiving customer:", error);
+      return json({ ok: false, error: "Lưu trữ thành viên thất bại" }, { status: 500 });
+    }
+  }
+  return json({ ok: false, error: "Thao tác không hợp lệ" }, { status: 400 });
+}
 function AdminNavigation() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const navItems = [
     {
       to: "/826264",
@@ -40,10 +61,8 @@ function AdminNavigation() {
       exact: true,
     },
   ];
-
   const isActive = (path: string, exact: boolean) =>
     exact ? currentPath === path : currentPath.startsWith(path);
-
   return (
     <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-900">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -125,7 +144,6 @@ function AdminNavigation() {
     </nav>
   );
 }
-
 export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-zinc-50">

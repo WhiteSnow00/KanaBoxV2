@@ -510,29 +510,14 @@ export default function AdminMemberList({
 ## File: app/components/CustomerTable.tsx
 ```typescript
 import { Link } from "@remix-run/react";
-import { useState } from "react";
-import { ChevronRight, StickyNote, Eye, Archive } from "lucide-react";
+import { ChevronRight, Eye, StickyNote } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
 import { cn } from "~/lib/utils";
 export interface CustomerWithStatus {
   customer: {
     _id: string;
     name: string;
     note?: string;
-    isPublicHidden?: boolean;
-    renewalCancelled?: boolean;
-    cancelledAt?: string | null;
   };
   latestPayment: {
     _id: string;
@@ -559,21 +544,14 @@ export interface CustomerTableI18n {
     status: string;
     endDate: string;
     latestPayment: string;
-    months: string;
-    note: string;
-    actions: string;
   };
   noPayment: string;
   view: string;
-  formatMonths: (months: number) => string;
 }
 interface CustomerTableProps {
   customers: CustomerWithStatus[];
   basePath: string;
-  showAdminActions?: boolean;
-  readOnly?: boolean;
   i18n?: CustomerTableI18n;
-  onArchive?: (customerId: string) => void;
   isFilteredEmpty?: boolean;
   filteredEmptyTitle?: string;
   filteredEmptySubtitle?: string;
@@ -601,15 +579,11 @@ function formatAmount(amount: number, currency: string): string {
 export default function CustomerTable({
   customers,
   basePath,
-  showAdminActions = false,
-  readOnly = false,
   i18n,
-  onArchive,
   isFilteredEmpty = false,
   filteredEmptyTitle,
   filteredEmptySubtitle,
 }: CustomerTableProps) {
-  const [archiveTarget, setArchiveTarget] = useState<{ id: string; name: string } | null>(null);
   const t: CustomerTableI18n =
     i18n || ({
       emptyTitle: "Chưa có thành viên nào",
@@ -619,20 +593,16 @@ export default function CustomerTable({
         status: "Trạng thái",
         endDate: "Ngày hết hạn",
         latestPayment: "Thanh toán gần nhất",
-        months: "Số tháng",
-        note: "Ghi chú",
-        actions: "Thao tác",
       },
       noPayment: "Chưa có thanh toán",
-      view: "Xem →",
-      formatMonths: (months: number) => `${months} tháng`,
+      view: "Xem",
     } satisfies CustomerTableI18n);
   if (customers.length === 0) {
     const emptyTitle = isFilteredEmpty && filteredEmptyTitle ? filteredEmptyTitle : t.emptyTitle;
     const emptySubtitle = isFilteredEmpty ? filteredEmptySubtitle : t.emptySubtitle;
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 mb-4">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100">
           <Eye className="h-6 w-6 text-zinc-400" />
         </div>
         <p className="text-base font-medium text-zinc-700">{emptyTitle}</p>
@@ -642,22 +612,17 @@ export default function CustomerTable({
       </div>
     );
   }
-  const isOverdue = (status: string) => status === "expired" || status === "grace";
   return (
     <>
       <div className="hidden md:block">
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/50">
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">{t.headers.name}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">{t.headers.status}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">{t.headers.endDate}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">{t.headers.latestPayment}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">{t.headers.months}</th>
-                {!readOnly && (
-                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 uppercase tracking-wider">{t.headers.actions}</th>
-                )}
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">{t.headers.name}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">{t.headers.status}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">{t.headers.endDate}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">{t.headers.latestPayment}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -668,19 +633,12 @@ export default function CustomerTable({
                 >
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-2">
-                      {readOnly ? (
-                        <span className="font-medium text-zinc-900">{customer.name}</span>
-                      ) : (
-                        <Link
-                          to={`${basePath}/${customer._id}`}
-                          className="font-medium text-zinc-900 hover:text-indigo-600 transition-colors"
-                        >
-                          {customer.name}
-                        </Link>
-                      )}
-                      {!readOnly && customer.isPublicHidden && (
-                        <Badge variant="hidden">Ẩn</Badge>
-                      )}
+                      <Link
+                        to={`${basePath}/${customer._id}`}
+                        className="font-medium text-zinc-900 transition-colors hover:text-indigo-600"
+                      >
+                        {customer.name}
+                      </Link>
                       {(customer.note || latestPayment?.note) && (
                         <span title={[customer.note, latestPayment?.note].filter(Boolean).join(" | ")}>
                           <StickyNote className="h-3.5 w-3.5 text-zinc-400" />
@@ -689,16 +647,11 @@ export default function CustomerTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={statusVariant[status.status] || "none"}>{status.label}</Badge>
-                      {customer.renewalCancelled && (
-                        <Badge variant="cancelled">Đã hủy gia hạn</Badge>
-                      )}
-                    </div>
+                    <Badge variant={statusVariant[status.status] || "none"}>{status.label}</Badge>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {latestPayment ? (
-                      <span className={cn("tabular-nums", status.status === "expired" && "text-red-600 font-medium")}>
+                      <span className={cn("tabular-nums", status.status === "expired" && "font-medium text-red-600")}>
                         {latestPayment.endDate}
                       </span>
                     ) : (
@@ -710,137 +663,68 @@ export default function CustomerTable({
                       <span className="text-zinc-300">{t.noPayment}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-500 tabular-nums">
-                    {latestPayment ? t.formatMonths(latestPayment.months) : <span className="text-zinc-300">—</span>}
-                  </td>
-                  {!readOnly && (
-                    <td className="px-4 py-3 text-sm text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`${basePath}/${customer._id}`}
-                          className="text-indigo-600 hover:text-indigo-800 text-xs font-medium"
-                        >
-                          {t.view}
-                        </Link>
-                        {showAdminActions && isOverdue(status.status) && onArchive && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => setArchiveTarget({ id: customer._id, name: customer.name })}
-                          >
-                            <Archive className="h-3 w-3 mr-1" />
-                            Lưu trữ
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-      <div className="md:hidden space-y-2">
+      <div className="space-y-2 md:hidden">
         {customers.map(({ customer, latestPayment, status }) => (
           <div
             key={customer._id}
             className={cn(
-              "rounded-xl border border-zinc-200 bg-white p-4 border-l-[3px] shadow-sm",
+              "rounded-xl border border-zinc-200 border-l-[3px] bg-white p-4 shadow-sm",
               rowAccent[status.status] || "border-l-zinc-300"
             )}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1.5">
-                  {readOnly ? (
-                    <span className="font-medium text-zinc-900 text-sm truncate">{customer.name}</span>
-                  ) : (
-                    <Link
-                      to={`${basePath}/${customer._id}`}
-                      className="font-medium text-zinc-900 text-sm truncate hover:text-indigo-600 transition-colors"
-                    >
-                      {customer.name}
-                    </Link>
-                  )}
-                  {!readOnly && customer.isPublicHidden && <Badge variant="hidden">Ẩn</Badge>}
-                </div>
+                <Link
+                  to={`${basePath}/${customer._id}`}
+                  className="truncate text-sm font-medium text-zinc-900 transition-colors hover:text-indigo-600"
+                >
+                  {customer.name}
+                </Link>
                 {customer.note && (
                   <p className="mt-1 text-xs text-zinc-400">{customer.note}</p>
                 )}
                 {latestPayment?.note && (
                   <p className="mt-0.5 text-xs text-zinc-400">{latestPayment.note}</p>
                 )}
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={statusVariant[status.status] || "none"}>{status.label}</Badge>
-                  {customer.renewalCancelled && (
-                    <Badge variant="cancelled">Đã hủy gia hạn</Badge>
-                  )}
-                </div>
               </div>
-              {!readOnly && (
-                <Link to={`${basePath}/${customer._id}`}>
-                  <ChevronRight className="h-5 w-5 text-zinc-400" />
-                </Link>
-              )}
+              <Link to={`${basePath}/${customer._id}`} aria-label={`${t.view} ${customer.name}`}>
+                <ChevronRight className="h-5 w-5 text-zinc-400" />
+              </Link>
             </div>
-            {latestPayment && (
-              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-zinc-500">
-                <div>
-                  <span className="text-zinc-400">{t.headers.endDate}:</span>{" "}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Badge variant={statusVariant[status.status] || "none"}>{status.label}</Badge>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-zinc-500">
+              <div>
+                <span className="text-zinc-400">{t.headers.endDate}:</span>{" "}
+                {latestPayment ? (
                   <span className={cn("font-medium", status.status === "expired" ? "text-red-600" : "text-zinc-700")}>
                     {latestPayment.endDate}
                   </span>
-                </div>
-                <div>
-                  <span className="text-zinc-400">{t.headers.latestPayment}:</span>{" "}
+                ) : (
+                  <span className="text-zinc-300">—</span>
+                )}
+              </div>
+              <div>
+                <span className="text-zinc-400">{t.headers.latestPayment}:</span>{" "}
+                {latestPayment ? (
                   <span className="font-medium text-zinc-700">
                     {formatAmount(latestPayment.amount, latestPayment.currency)}
                   </span>
-                </div>
+                ) : (
+                  <span className="text-zinc-300">{t.noPayment}</span>
+                )}
               </div>
-            )}
-            {!readOnly && showAdminActions && isOverdue(status.status) && onArchive && (
-              <div className="mt-3 pt-3 border-t border-zinc-100">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={() => setArchiveTarget({ id: customer._id, name: customer.name })}
-                >
-                  <Archive className="h-3 w-3 mr-1" />
-                  Lưu trữ
-                </Button>
-              </div>
-            )}
+            </div>
           </div>
         ))}
       </div>
-      <AlertDialog open={!!archiveTarget} onOpenChange={(open) => { if (!open) setArchiveTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Lưu trữ thành viên</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc muốn lưu trữ &quot;{archiveTarget?.name}&quot;? Họ sẽ bị ẩn khỏi bảng nhưng dữ liệu thanh toán vẫn được giữ lại.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => {
-                if (archiveTarget && onArchive) {
-                  onArchive(archiveTarget.id);
-                }
-                setArchiveTarget(null);
-              }}
-            >
-              Lưu trữ
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
@@ -2649,8 +2533,6 @@ export default function PublicHome() {
       <CustomerTable
         customers={filteredCustomers}
         basePath="/customers"
-        showAdminActions={false}
-        readOnly={true}
         i18n={strings.customerTable}
         isFilteredEmpty={isFilteredEmpty}
         filteredEmptyTitle={filteredEmptyTitle}
@@ -2981,7 +2863,14 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<RevenueSkeleton />}>
-            <Await resolve={monthlyTotals}>
+            <Await
+              resolve={monthlyTotals}
+              errorElement={
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                  Không thể tải dữ liệu doanh thu.
+                </div>
+              }
+            >
               {(resolvedMonthlyTotals) => (
                 <RevenueTable monthlyTotals={resolvedMonthlyTotals} />
               )}
@@ -3175,7 +3064,7 @@ export default function AdminEditCustomer() {
 ## File: app/routes/826264.customers.$customerId.tsx
 ```typescript
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { json, useLoaderData, useOutlet, Link, redirect, Form } from "@remix-run/react";
+import { json, useFetcher, useLoaderData, useOutlet, Link, redirect, Form } from "@remix-run/react";
 import { useState } from "react";
 import { ObjectId } from "mongodb";
 import {
@@ -3240,6 +3129,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
     customer: {
       _id: customer._id.toString(),
       name: customer.displayName,
+      nameHistory: customer.nameHistory || [],
       note: customer.note,
       isPublicHidden: customer.isPublicHidden || false,
       renewalCancelled: customer.renewalCancelled || false,
@@ -3319,6 +3209,8 @@ export default function AdminCustomerDetail() {
   const outlet = useOutlet();
   const { customer, payments, latestStatus } = useLoaderData<typeof loader>();
   const [voidTarget, setVoidTarget] = useState<{ id: string; amount: string } | null>(null);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const archiveFetcher = useFetcher<{ error?: string }>();
   if (outlet) {
     return outlet;
   }
@@ -3372,9 +3264,13 @@ export default function AdminCustomerDetail() {
                   Thêm thanh toán
                 </Link>
               </Button>
-              <AlertDialog>
+              <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setArchiveDialogOpen(true)}
+                  >
                     <Archive className="h-3.5 w-3.5 mr-1.5" />
                     Lưu trữ
                   </Button>
@@ -3386,23 +3282,47 @@ export default function AdminCustomerDetail() {
                       Bạn có chắc muốn lưu trữ &quot;{customer.name}&quot;? Họ sẽ bị ẩn khỏi bảng nhưng dữ liệu thanh toán vẫn được giữ lại.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <Form method="post" className="contents">
-                    <input type="hidden" name="intent" value="deleteCustomer" />
-                    <AlertDialogFooter>
-                      <AlertDialogCancel type="button">Hủy</AlertDialogCancel>
-                      <Button type="submit" variant="destructive" className="bg-red-600 hover:bg-red-700">
-                        Lưu trữ
-                      </Button>
-                    </AlertDialogFooter>
-                  </Form>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setArchiveDialogOpen(false)}>
+                      Hủy
+                    </AlertDialogCancel>
+                    <Button
+                      variant="destructive"
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={archiveFetcher.state !== "idle"}
+                      onClick={() => {
+                        archiveFetcher.submit(
+                          { intent: "deleteCustomer" },
+                          { method: "post" }
+                        );
+                        setArchiveDialogOpen(false);
+                      }}
+                    >
+                      {archiveFetcher.state !== "idle" ? "Đang lưu trữ..." : "Lưu trữ"}
+                    </Button>
+                  </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             </div>
           </div>
         </CardHeader>
-        {customer.note && (
-          <CardContent className="pt-0">
-            <NoteBlock icon={StickyNote} label="Ghi chú" text={customer.note} />
+        {(customer.note || customer.nameHistory.length > 0) && (
+          <CardContent className="space-y-3 pt-0">
+            {customer.note && (
+              <NoteBlock icon={StickyNote} label="Ghi chú" text={customer.note} />
+            )}
+            {customer.nameHistory.length > 0 && (
+              <div className="rounded-lg bg-zinc-50 p-3">
+                <p className="mb-2 text-xs font-medium text-zinc-500">Lịch sử đổi tên</p>
+                <div className="space-y-1">
+                  {customer.nameHistory.map((entry, index) => (
+                    <p key={`${entry.name}-${entry.changedAt}-${index}`} className="text-xs text-zinc-600">
+                      {entry.name} · {new Date(entry.changedAt).toLocaleDateString("vi-VN")}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         )}
       </Card>
@@ -3540,7 +3460,7 @@ import { json, redirect } from "@remix-run/node";
 import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { ObjectId } from "mongodb";
-import { Archive, CreditCard, RefreshCw } from "lucide-react";
+import { Archive, RefreshCw } from "lucide-react";
 import { getCustomerById, listCustomers, unarchiveCustomer } from "~/models/customer.server";
 import { createPayment, listLatestPaymentsForAllCustomers } from "~/models/payment.server";
 import {
@@ -3589,6 +3509,13 @@ const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "no
   expired: "expired",
   none: "none",
 };
+function serializeArchivedAt(value: Date | string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
 interface ActionData {
   error?: string;
   errors?: {
@@ -3622,7 +3549,7 @@ export async function loader({}: LoaderFunctionArgs) {
           _id: customer._id.toString(),
           name: customer.displayName,
           note: customer.note,
-          archivedAt: customer.archivedAt?.toISOString() || null,
+          archivedAt: serializeArchivedAt(customer.archivedAt),
         },
         latestPayment: latestPayment
           ? {
@@ -3768,24 +3695,15 @@ function RestoreActions({
   onRestoreWithPayment: (target: RestoreTarget) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => onRestoreWithPayment(customer)}
-      >
-        <CreditCard className="mr-1.5 h-3.5 w-3.5" />
-        Khôi phục + Thanh toán
-      </Button>
-      <Form method="post">
-        <input type="hidden" name="intent" value="unarchive" />
-        <input type="hidden" name="customerId" value={customer.id} />
-        <Button type="submit" variant="outline" size="sm" className="w-full sm:w-auto">
-          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-          Khôi phục
-        </Button>
-      </Form>
-    </div>
+    <Button
+      type="button"
+      size="sm"
+      className="w-full sm:w-auto"
+      onClick={() => onRestoreWithPayment(customer)}
+    >
+      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+      Khôi phục
+    </Button>
   );
 }
 function RestoreWithPaymentDialog({
@@ -3836,7 +3754,7 @@ function RestoreWithPaymentDialog({
     <AlertDialog open={!!target} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Khôi phục + Thanh toán</AlertDialogTitle>
+          <AlertDialogTitle>Khôi phục thành viên</AlertDialogTitle>
           <AlertDialogDescription>
             Tạo thanh toán mới khi khôi phục &quot;{target?.name}&quot;.
           </AlertDialogDescription>
