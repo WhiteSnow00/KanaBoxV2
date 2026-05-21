@@ -189,8 +189,6 @@ export default function PublicHome() {
       <CustomerTable
         customers={filteredCustomers}
         basePath="/customers"
-        showAdminActions={false}
-        readOnly={true}
         i18n={strings.customerTable}
         isFilteredEmpty={isFilteredEmpty}
         filteredEmptyTitle={filteredEmptyTitle}

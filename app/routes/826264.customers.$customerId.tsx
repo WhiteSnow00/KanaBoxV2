@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { json, useLoaderData, useOutlet, Link, redirect, Form } from "@remix-run/react";
+import { json, useFetcher, useLoaderData, useOutlet, Link, redirect, Form } from "@remix-run/react";
 import { useState } from "react";
 import { ObjectId } from "mongodb";
 import {
@@ -71,6 +71,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
     customer: {
       _id: customer._id.toString(),
       name: customer.displayName,
+      nameHistory: customer.nameHistory || [],
       note: customer.note,
       isPublicHidden: customer.isPublicHidden || false,
       renewalCancelled: customer.renewalCancelled || false,
@@ -157,6 +158,8 @@ export default function AdminCustomerDetail() {
   const outlet = useOutlet();
   const { customer, payments, latestStatus } = useLoaderData<typeof loader>();
   const [voidTarget, setVoidTarget] = useState<{ id: string; amount: string } | null>(null);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const archiveFetcher = useFetcher<{ error?: string }>();
 
   if (outlet) {
     return outlet;
@@ -213,9 +216,13 @@ export default function AdminCustomerDetail() {
                   Thêm thanh toán
                 </Link>
               </Button>
-              <AlertDialog>
+              <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setArchiveDialogOpen(true)}
+                  >
                     <Archive className="h-3.5 w-3.5 mr-1.5" />
                     Lưu trữ
                   </Button>
@@ -227,23 +234,47 @@ export default function AdminCustomerDetail() {
                       Bạn có chắc muốn lưu trữ &quot;{customer.name}&quot;? Họ sẽ bị ẩn khỏi bảng nhưng dữ liệu thanh toán vẫn được giữ lại.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <Form method="post" className="contents">
-                    <input type="hidden" name="intent" value="deleteCustomer" />
-                    <AlertDialogFooter>
-                      <AlertDialogCancel type="button">Hủy</AlertDialogCancel>
-                      <Button type="submit" variant="destructive" className="bg-red-600 hover:bg-red-700">
-                        Lưu trữ
-                      </Button>
-                    </AlertDialogFooter>
-                  </Form>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setArchiveDialogOpen(false)}>
+                      Hủy
+                    </AlertDialogCancel>
+                    <Button
+                      variant="destructive"
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={archiveFetcher.state !== "idle"}
+                      onClick={() => {
+                        archiveFetcher.submit(
+                          { intent: "deleteCustomer" },
+                          { method: "post" }
+                        );
+                        setArchiveDialogOpen(false);
+                      }}
+                    >
+                      {archiveFetcher.state !== "idle" ? "Đang lưu trữ..." : "Lưu trữ"}
+                    </Button>
+                  </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             </div>
           </div>
         </CardHeader>
-        {customer.note && (
-          <CardContent className="pt-0">
-            <NoteBlock icon={StickyNote} label="Ghi chú" text={customer.note} />
+        {(customer.note || customer.nameHistory.length > 0) && (
+          <CardContent className="space-y-3 pt-0">
+            {customer.note && (
+              <NoteBlock icon={StickyNote} label="Ghi chú" text={customer.note} />
+            )}
+            {customer.nameHistory.length > 0 && (
+              <div className="rounded-lg bg-zinc-50 p-3">
+                <p className="mb-2 text-xs font-medium text-zinc-500">Lịch sử đổi tên</p>
+                <div className="space-y-1">
+                  {customer.nameHistory.map((entry, index) => (
+                    <p key={`${entry.name}-${entry.changedAt}-${index}`} className="text-xs text-zinc-600">
+                      {entry.name} · {new Date(entry.changedAt).toLocaleDateString("vi-VN")}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         )}
       </Card>

@@ -342,7 +342,14 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<RevenueSkeleton />}>
-            <Await resolve={monthlyTotals}>
+            <Await
+              resolve={monthlyTotals}
+              errorElement={
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                  Không thể tải dữ liệu doanh thu.
+                </div>
+              }
+            >
               {(resolvedMonthlyTotals) => (
                 <RevenueTable monthlyTotals={resolvedMonthlyTotals} />
               )}

@@ -3,7 +3,7 @@ import { json, redirect } from "@remix-run/node";
 import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { ObjectId } from "mongodb";
-import { Archive, CreditCard, RefreshCw } from "lucide-react";
+import { Archive, RefreshCw } from "lucide-react";
 import { getCustomerById, listCustomers, unarchiveCustomer } from "~/models/customer.server";
 import { createPayment, listLatestPaymentsForAllCustomers } from "~/models/payment.server";
 import {
@@ -55,6 +55,15 @@ const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "no
   none: "none",
 };
 
+function serializeArchivedAt(value: Date | string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 interface ActionData {
   error?: string;
   errors?: {
@@ -90,7 +99,7 @@ export async function loader({}: LoaderFunctionArgs) {
           _id: customer._id.toString(),
           name: customer.displayName,
           note: customer.note,
-          archivedAt: customer.archivedAt?.toISOString() || null,
+          archivedAt: serializeArchivedAt(customer.archivedAt),
         },
         latestPayment: latestPayment
           ? {
@@ -260,24 +269,15 @@ function RestoreActions({
   onRestoreWithPayment: (target: RestoreTarget) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => onRestoreWithPayment(customer)}
-      >
-        <CreditCard className="mr-1.5 h-3.5 w-3.5" />
-        Khôi phục + Thanh toán
-      </Button>
-      <Form method="post">
-        <input type="hidden" name="intent" value="unarchive" />
-        <input type="hidden" name="customerId" value={customer.id} />
-        <Button type="submit" variant="outline" size="sm" className="w-full sm:w-auto">
-          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-          Khôi phục
-        </Button>
-      </Form>
-    </div>
+    <Button
+      type="button"
+      size="sm"
+      className="w-full sm:w-auto"
+      onClick={() => onRestoreWithPayment(customer)}
+    >
+      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+      Khôi phục
+    </Button>
   );
 }
 
@@ -334,7 +334,7 @@ function RestoreWithPaymentDialog({
     <AlertDialog open={!!target} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Khôi phục + Thanh toán</AlertDialogTitle>
+          <AlertDialogTitle>Khôi phục thành viên</AlertDialogTitle>
           <AlertDialogDescription>
             Tạo thanh toán mới khi khôi phục &quot;{target?.name}&quot;.
           </AlertDialogDescription>
