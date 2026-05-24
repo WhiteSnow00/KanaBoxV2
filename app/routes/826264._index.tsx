@@ -95,7 +95,13 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     try {
-      await archiveCustomer(customerId);
+      const archived = await archiveCustomer(customerId);
+      if (!archived) {
+        return json(
+          { ok: false, error: "Không tìm thấy thành viên", customerId },
+          { status: 404 }
+        );
+      }
       return json({ ok: true, customerId });
     } catch (error) {
       console.error("Error archiving customer:", error);

@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { redirect, json, useActionData, Form, Link } from "@remix-run/react";
 import { useState } from "react";
 import {
+  archiveCustomer,
   createCustomer,
   findArchivedByName,
   unarchiveCustomer,
@@ -117,24 +118,6 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    const archived = await findArchivedByName(displayName);
-
-    if (archived) {
-      const customerId = archived._id.toString();
-      await unarchiveCustomer(customerId, note || undefined);
-
-      await createPayment({
-        customerId,
-        paidDate,
-        currency,
-        amount,
-        months,
-        note: paymentNote || undefined,
-      });
-
-      return redirect(`/826264/customers/${customerId}`);
-    }
-
     const activeExists = await customerExistsByDisplayName(displayName);
     if (activeExists) {
       return json<ActionData>(
@@ -157,6 +140,40 @@ export async function action({ request }: ActionFunctionArgs) {
       );
     }
 
+    const archived = await findArchivedByName(displayName);
+
+    if (archived) {
+      const customerId = archived._id.toString();
+      let restored = false;
+      try {
+        const restoredCustomer = await unarchiveCustomer(customerId, note || undefined);
+        if (!restoredCustomer) {
+          throw new Error("Failed to restore archived customer");
+        }
+        restored = true;
+
+        await createPayment({
+          customerId,
+          paidDate,
+          currency,
+          amount,
+          months,
+          note: paymentNote || undefined,
+        });
+
+        return redirect(`/826264/customers/${customerId}`);
+      } catch (innerError) {
+        if (restored) {
+          try {
+            await archiveCustomer(customerId);
+          } catch (rollbackError) {
+            console.error("Error rolling back unarchive:", rollbackError);
+          }
+        }
+        throw innerError;
+      }
+    }
+
     const customer = await createCustomer({ displayName, note: note || undefined });
     const customerId = customer._id.toString();
 
@@ -172,10 +189,16 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect(`/826264/customers/${customerId}`);
   } catch (error) {
     console.error("Error creating customer/payment:", error);
+    const conflict =
+      typeof error === "object" && error !== null && "code" in error
+        ? (error as { code?: number }).code === 11000
+        : false;
     return json<ActionData>(
       {
         errors: {
-          form: "Tạo thành viên thất bại. Vui lòng thử lại.",
+          form: conflict
+            ? "Đã có thành viên đang hoạt động với tên này. Vui lòng đổi tên."
+            : "Tạo thành viên thất bại. Vui lòng thử lại.",
         },
         values: {
           displayName,
@@ -188,7 +211,7 @@ export async function action({ request }: ActionFunctionArgs) {
         },
         recommendedMonths,
       },
-      { status: 500 }
+      { status: conflict ? 409 : 500 }
     );
   }
 }

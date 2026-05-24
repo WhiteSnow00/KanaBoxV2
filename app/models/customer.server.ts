@@ -28,11 +28,15 @@ export interface CustomerInput {
   note?: string;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function findArchivedByName(name: string): Promise<Customer | null> {
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
   return collection.findOne({
-    displayName: { $regex: `^${name.trim()}$`, $options: "i" },
+    displayName: { $regex: `^${escapeRegExp(name.trim())}$`, $options: "i" },
     isArchived: true,
   });
 }
@@ -45,27 +49,50 @@ export async function unarchiveCustomer(id: string, note?: string): Promise<Cust
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
 
+  const target = await collection.findOne({ _id: new ObjectId(id) });
+  if (!target) {
+    return null;
+  }
+
+  const conflict = await collection.findOne({
+    _id: { $ne: new ObjectId(id) },
+    displayName: {
+      $regex: `^${escapeRegExp(target.displayName.trim())}$`,
+      $options: "i",
+    },
+    isArchived: { $ne: true },
+  });
+
+  if (conflict) {
+    const error = new Error(
+      `Active customer with displayName "${target.displayName}" already exists`
+    ) as Error & { code?: number };
+    error.code = 11000;
+    throw error;
+  }
+
   const setOps: Record<string, unknown> = {
     isArchived: false,
-    isPublicHidden: false,
-    renewalCancelled: false,
     updatedAt: new Date(),
   };
 
+  const unsetOps: Record<string, ""> = {
+    archivedAt: "",
+  };
+
   if (note !== undefined) {
-    setOps.note = note || undefined;
+    if (note && note.trim()) {
+      setOps.note = note.trim();
+    } else {
+      unsetOps.note = "";
+    }
   }
 
   const result = await collection.findOneAndUpdate(
     { _id: new ObjectId(id) },
     {
       $set: setOps,
-      $unset: {
-        archivedAt: "",
-        hiddenAt: "",
-        hiddenReason: "",
-        cancelledAt: "",
-      },
+      $unset: unsetOps,
     },
     { returnDocument: "after" }
   );
@@ -111,7 +138,7 @@ export async function listCustomers(
   }
 
   if (searchQuery && searchQuery.trim()) {
-    filter.displayName = { $regex: searchQuery.trim(), $options: "i" };
+    filter.displayName = { $regex: escapeRegExp(searchQuery.trim()), $options: "i" };
   }
 
   return collection
@@ -169,7 +196,7 @@ export async function customerExistsByDisplayName(
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
   const filter: Record<string, unknown> = {
-    displayName: { $regex: `^${name.trim()}$`, $options: "i" },
+    displayName: { $regex: `^${escapeRegExp(name.trim())}$`, $options: "i" },
   };
   if (excludeArchived) {
     filter.isArchived = { $ne: true };
@@ -278,7 +305,6 @@ export async function archiveCustomer(id: string): Promise<Customer | null> {
       $set: {
         isArchived: true,
         archivedAt: new Date(),
-        isPublicHidden: true,
         updatedAt: new Date(),
       },
     },
@@ -303,7 +329,6 @@ export async function deleteCustomer(id: string): Promise<boolean> {
       $set: {
         isArchived: true,
         archivedAt: new Date(),
-        isPublicHidden: true,
         updatedAt: new Date(),
       },
     }

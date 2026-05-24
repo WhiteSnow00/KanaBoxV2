@@ -4,7 +4,12 @@ import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-
 import { useEffect, useState } from "react";
 import { ObjectId } from "mongodb";
 import { Archive, RefreshCw } from "lucide-react";
-import { getCustomerById, listCustomers, unarchiveCustomer } from "~/models/customer.server";
+import {
+  archiveCustomer,
+  getCustomerById,
+  listCustomers,
+  unarchiveCustomer,
+} from "~/models/customer.server";
 import { createPayment, listLatestPaymentsForAllCustomers } from "~/models/payment.server";
 import {
   BASE_PRICE_USD,
@@ -133,14 +138,36 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   if (intent === "unarchive") {
+    const customer = await getCustomerById(customerId);
+    if (!customer || !customer.isArchived) {
+      return json<ActionData>(
+        { error: "Thành viên không ở trạng thái lưu trữ" },
+        { status: 400 }
+      );
+    }
+
     try {
-      await unarchiveCustomer(customerId);
+      const restored = await unarchiveCustomer(customerId);
+      if (!restored) {
+        return json<ActionData>(
+          { error: "Không tìm thấy thành viên" },
+          { status: 404 }
+        );
+      }
       return redirect("/826264/customers/archived");
     } catch (error) {
       console.error("Error restoring archived customer:", error);
+      const conflict =
+        typeof error === "object" && error !== null && "code" in error
+          ? (error as { code?: number }).code === 11000
+          : false;
       return json<ActionData>(
-        { error: "Khôi phục thành viên thất bại. Vui lòng kiểm tra tên trùng và thử lại." },
-        { status: 500 }
+        {
+          error: conflict
+            ? "Đã có thành viên đang hoạt động với tên này. Vui lòng đổi tên trước khi khôi phục."
+            : "Khôi phục thành viên thất bại. Vui lòng thử lại.",
+        },
+        { status: conflict ? 409 : 500 }
       );
     }
   }
@@ -156,6 +183,8 @@ export async function action({ request }: ActionFunctionArgs) {
   const customer = await getCustomerById(customerId);
   if (!customer) {
     errors.customerId = "Không tìm thấy thành viên";
+  } else if (!customer.isArchived) {
+    errors.customerId = "Thành viên không ở trạng thái lưu trữ";
   }
 
   const amount = parseFloat(amountStr);
@@ -196,8 +225,21 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
+  let restored = false;
   try {
-    await unarchiveCustomer(customerId, note || undefined);
+    const restoredCustomer = await unarchiveCustomer(customerId);
+    if (!restoredCustomer) {
+      return json<ActionData>(
+        {
+          errors: { customerId: "Không tìm thấy thành viên" },
+          values,
+          recommendedMonths,
+        },
+        { status: 404 }
+      );
+    }
+    restored = true;
+
     await createPayment({
       customerId,
       paidDate,
@@ -210,15 +252,31 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect(`/826264/customers/${customerId}`);
   } catch (error) {
     console.error("Error restoring archived customer with payment:", error);
+
+    if (restored) {
+      try {
+        await archiveCustomer(customerId);
+      } catch (rollbackError) {
+        console.error("Error rolling back unarchive:", rollbackError);
+      }
+    }
+
+    const conflict =
+      typeof error === "object" && error !== null && "code" in error
+        ? (error as { code?: number }).code === 11000
+        : false;
+
     return json<ActionData>(
       {
         errors: {
-          form: "Khôi phục và tạo thanh toán thất bại. Vui lòng thử lại.",
+          form: conflict
+            ? "Đã có thành viên đang hoạt động với tên này. Vui lòng đổi tên trước khi khôi phục."
+            : "Khôi phục và tạo thanh toán thất bại. Vui lòng thử lại.",
         },
         values,
         recommendedMonths,
       },
-      { status: 500 }
+      { status: conflict ? 409 : 500 }
     );
   }
 }
@@ -426,13 +484,13 @@ function RestoreWithPaymentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="restoreNote">Ghi chú</Label>
+            <Label htmlFor="restoreNote">Ghi chú thanh toán</Label>
             <Textarea
               name="note"
               id="restoreNote"
               rows={3}
               defaultValue={targetValues?.note || ""}
-              placeholder="Ghi chú (tùy chọn) về lần khôi phục..."
+              placeholder="Ghi chú (tùy chọn) cho thanh toán này..."
             />
           </div>
 

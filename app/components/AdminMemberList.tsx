@@ -151,13 +151,6 @@ export default function AdminMemberList({
       setArchiveError(fetcher.data.error);
     } else if (fetcher.data?.ok) {
       revalidator.revalidate();
-    } else {
-      setOptimisticArchivedIds((current) => {
-        const next = new Set(current);
-        next.delete(pendingArchiveId);
-        return next;
-      });
-      setArchiveError("Lưu trữ thành viên thất bại. Vui lòng thử lại.");
     }
 
     setPendingArchiveId(null);

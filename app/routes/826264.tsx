@@ -28,7 +28,10 @@ export async function action({ request }: ActionFunctionArgs) {
       return json({ ok: false, error: "ID thành viên không hợp lệ" }, { status: 400 });
     }
     try {
-      await archiveCustomer(customerId);
+      const archived = await archiveCustomer(customerId);
+      if (!archived) {
+        return json({ ok: false, error: "Không tìm thấy thành viên" }, { status: 404 });
+      }
       return json({ ok: true, customerId });
     } catch (error) {
       console.error("Error archiving customer:", error);

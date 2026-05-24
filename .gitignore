@@ -11,3 +11,5 @@ npm-debug.log*
 .DS_Store
 README.md
 *.md
+.claude
+.gitnexus
