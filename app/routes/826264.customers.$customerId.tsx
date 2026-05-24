@@ -21,8 +21,6 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -160,6 +158,7 @@ export default function AdminCustomerDetail() {
   const [voidTarget, setVoidTarget] = useState<{ id: string; amount: string } | null>(null);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const archiveFetcher = useFetcher<{ error?: string }>();
+  const voidFetcher = useFetcher<{ error?: string }>();
 
   if (outlet) {
     return outlet;
@@ -235,19 +234,24 @@ export default function AdminCustomerDetail() {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setArchiveDialogOpen(false)}>
-                      Hủy
-                    </AlertDialogCancel>
                     <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setArchiveDialogOpen(false)}
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      type="button"
                       variant="destructive"
                       className="bg-red-600 hover:bg-red-700"
                       disabled={archiveFetcher.state !== "idle"}
                       onClick={() => {
+                        setArchiveDialogOpen(false);
                         archiveFetcher.submit(
                           { intent: "deleteCustomer" },
                           { method: "post" }
                         );
-                        setArchiveDialogOpen(false);
                       }}
                     >
                       {archiveFetcher.state !== "idle" ? "Đang lưu trữ..." : "Lưu trữ"}
@@ -393,14 +397,30 @@ export default function AdminCustomerDetail() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <Form method="post" className="contents" onSubmit={() => setVoidTarget(null)}>
-              <input type="hidden" name="intent" value="deletePayment" />
-              <input type="hidden" name="paymentId" value={voidTarget?.id || ""} />
-              <AlertDialogAction type="submit" className="bg-red-600 hover:bg-red-700">
-                Hủy bỏ thanh toán
-              </AlertDialogAction>
-            </Form>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setVoidTarget(null)}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700"
+              disabled={voidFetcher.state !== "idle"}
+              onClick={() => {
+                if (!voidTarget) return;
+                const paymentId = voidTarget.id;
+                setVoidTarget(null);
+                voidFetcher.submit(
+                  { intent: "deletePayment", paymentId },
+                  { method: "post" }
+                );
+              }}
+            >
+              {voidFetcher.state !== "idle" ? "Đang hủy..." : "Hủy bỏ thanh toán"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

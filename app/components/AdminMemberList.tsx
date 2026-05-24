@@ -5,8 +5,6 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -400,13 +398,22 @@ export default function AdminMemberList({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setArchiveTarget(null)}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
               className="bg-red-600 hover:bg-red-700"
+              disabled={fetcher.state !== "idle"}
               onClick={handleArchiveConfirm}
             >
-              Lưu trữ
-            </AlertDialogAction>
+              {fetcher.state !== "idle" ? "Đang lưu trữ..." : "Lưu trữ"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
