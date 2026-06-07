@@ -70,7 +70,6 @@ function PublicHeader() {
             </div>
             <div>
               <span className="block text-sm font-semibold text-zinc-950 dark:text-zinc-50">Kana Box</span>
-              <span className="block text-[11px] font-medium uppercase text-zinc-400 dark:text-zinc-500">Subscription Ledger</span>
             </div>
           </Link>
           <ThemeToggle />
