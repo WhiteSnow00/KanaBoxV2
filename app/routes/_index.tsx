@@ -127,7 +127,7 @@ export default function PublicHome() {
     : "Thử đổi từ khóa hoặc bộ lọc trạng thái.";
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title={strings.membersHeading}
         description={strings.membersCount(filteredCustomers.length)}
@@ -140,7 +140,7 @@ export default function PublicHome() {
         />
       </PageHeader>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-500 shadow-sm">
+      <div className="surface flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 text-xs text-zinc-500">
         <span className="font-medium text-zinc-600">{strings.statusLegendLabel}</span>
         {statusCardConfig.map(({ key, dot }) => (
           <span key={key} className="inline-flex items-center gap-1.5">
@@ -150,7 +150,7 @@ export default function PublicHome() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="reveal-list grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard
           icon={Users}
           label={strings.membersHeading}
@@ -181,8 +181,8 @@ export default function PublicHome() {
       <SearchField
         value={searchTerm}
         onChange={setSearchTerm}
-        placeholder={lang === "en" ? "Search... (Ctrl+K)" : "Tìm kiếm... (Ctrl+K)"}
-        className="max-w-xs"
+        placeholder={lang === "en" ? "Search members..." : "Tìm kiếm thành viên..."}
+        className="max-w-sm"
         inputRef={searchInputRef}
       />
 

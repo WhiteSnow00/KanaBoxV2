@@ -1,16 +1,29 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import {
+  Form,
+  Link,
+  useActionData,
+  useFetcher,
+  useLoaderData,
+  useNavigation,
+  useRevalidator,
+} from "@remix-run/react";
+import { useEffect, useMemo, useState } from "react";
 import { ObjectId } from "mongodb";
-import { Archive, RefreshCw } from "lucide-react";
+import { Archive, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import {
   archiveCustomer,
+  deleteArchivedCustomerWithPayments,
   getCustomerById,
   listCustomers,
   unarchiveCustomer,
 } from "~/models/customer.server";
-import { createPayment, listLatestPaymentsForAllCustomers } from "~/models/payment.server";
+import {
+  createPayment,
+  listLatestPaymentsForAllCustomers,
+  listPaymentCountsForAllCustomers,
+} from "~/models/payment.server";
 import {
   BASE_PRICE_USD,
   BASE_PRICE_VND,
@@ -44,7 +57,10 @@ import {
   FormMessage,
   MonthsRecommendation,
   PageHeader,
+  PaginationControls,
   formatCurrency,
+  getPageCount,
+  paginateItems,
 } from "~/components/shared";
 import { cn } from "~/lib/utils";
 
@@ -89,23 +105,33 @@ interface ActionData {
   recommendedMonths?: number;
 }
 
+type DeleteFetcherData = {
+  ok?: boolean;
+  error?: string;
+  customerId?: string;
+  deletedPaymentCount?: number;
+};
+
 export async function loader({}: LoaderFunctionArgs) {
-  const [customers, latestPaymentsMap] = await Promise.all([
+  const [customers, latestPaymentsMap, paymentCountsMap] = await Promise.all([
     listCustomers(undefined, { includeArchived: true }),
     listLatestPaymentsForAllCustomers(),
+    listPaymentCountsForAllCustomers(),
   ]);
 
   const archivedCustomers = customers
     .filter((customer) => customer.isArchived)
     .map((customer) => {
-      const latestPayment = latestPaymentsMap.get(customer._id.toString());
+      const customerId = customer._id.toString();
+      const latestPayment = latestPaymentsMap.get(customerId);
       return {
         customer: {
-          _id: customer._id.toString(),
+          _id: customerId,
           name: customer.displayName,
           note: customer.note,
           archivedAt: serializeArchivedAt(customer.archivedAt),
         },
+        paymentCount: paymentCountsMap.get(customerId) || 0,
         latestPayment: latestPayment
           ? {
             _id: latestPayment._id.toString(),
@@ -129,12 +155,63 @@ export async function action({ request }: ActionFunctionArgs) {
   const intent = String(formData.get("intent") || "");
   const customerId = String(formData.get("customerId") || "");
 
-  if (intent !== "unarchive" && intent !== "unarchiveWithPayment") {
+  if (
+    intent !== "unarchive" &&
+    intent !== "unarchiveWithPayment" &&
+    intent !== "deleteArchived"
+  ) {
     return json<ActionData>({ error: "Thao tác không hợp lệ" }, { status: 400 });
   }
 
   if (!customerId || !ObjectId.isValid(customerId)) {
     return json<ActionData>({ error: "ID thành viên không hợp lệ" }, { status: 400 });
+  }
+
+  if (intent === "deleteArchived") {
+    const customer = await getCustomerById(customerId);
+    if (!customer) {
+      return json<DeleteFetcherData>(
+        { ok: false, error: "Không tìm thấy thành viên", customerId },
+        { status: 404 }
+      );
+    }
+
+    if (!customer.isArchived) {
+      return json<DeleteFetcherData>(
+        {
+          ok: false,
+          error: "Chỉ có thể xóa vĩnh viễn thành viên đang lưu trữ",
+          customerId,
+        },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const deleted = await deleteArchivedCustomerWithPayments(customerId);
+      if (!deleted) {
+        return json<DeleteFetcherData>(
+          { ok: false, error: "Không tìm thấy thành viên lưu trữ", customerId },
+          { status: 404 }
+        );
+      }
+
+      return json<DeleteFetcherData>({
+        ok: true,
+        customerId,
+        deletedPaymentCount: deleted.deletedPaymentCount,
+      });
+    } catch (error) {
+      console.error("Error permanently deleting archived customer:", error);
+      return json<DeleteFetcherData>(
+        {
+          ok: false,
+          error: "Xóa thành viên lưu trữ thất bại. Vui lòng thử lại.",
+          customerId,
+        },
+        { status: 500 }
+      );
+    }
   }
 
   if (intent === "unarchive") {
@@ -294,6 +371,10 @@ type RestoreTarget = {
   name: string;
 };
 
+type DeleteTarget = RestoreTarget & {
+  paymentCount: number;
+};
+
 function getRestoreTargetById(
   customers: Array<{ customer: { _id: string; name: string } }>,
   customerId: string | undefined
@@ -319,23 +400,49 @@ function getInitialAmount(currency: Currency, rawAmount?: string): number {
   return currency === "USD" ? BASE_PRICE_USD : BASE_PRICE_VND;
 }
 
-function RestoreActions({
+function formatPaymentCount(count: number): string {
+  return `${count} bản ghi thanh toán`;
+}
+
+function ArchivedCustomerActions({
   customer,
+  paymentCount,
   onRestoreWithPayment,
+  onDelete,
 }: {
   customer: RestoreTarget;
+  paymentCount: number;
   onRestoreWithPayment: (target: RestoreTarget) => void;
+  onDelete: (target: DeleteTarget) => void;
 }) {
   return (
-    <Button
-      type="button"
-      size="sm"
-      className="w-full sm:w-auto"
-      onClick={() => onRestoreWithPayment(customer)}
-    >
-      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-      Khôi phục
-    </Button>
+    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" asChild>
+        <Link to={`/826264/customers/${customer.id}/edit?from=archived`}>
+          <Pencil className="mr-1.5 h-3.5 w-3.5" />
+          Sửa
+        </Link>
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        className="w-full sm:w-auto"
+        onClick={() => onRestoreWithPayment(customer)}
+      >
+        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+        Khôi phục
+      </Button>
+      <Button
+        type="button"
+        variant="destructive"
+        size="sm"
+        className="w-full sm:w-auto"
+        onClick={() => onDelete({ ...customer, paymentCount })}
+      >
+        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+        Xóa
+      </Button>
+    </div>
   );
 }
 
@@ -506,11 +613,89 @@ function RestoreWithPaymentDialog({
   );
 }
 
+function DeleteArchivedCustomerDialog({
+  target,
+  error,
+  isSubmitting,
+  onOpenChange,
+  onConfirm,
+}: {
+  target: DeleteTarget | null;
+  error: string | null;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={!!target} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Xóa vĩnh viễn thành viên</AlertDialogTitle>
+          <AlertDialogDescription>
+            Bạn có chắc muốn xóa vĩnh viễn &quot;{target?.name}&quot;? Thành viên này và {formatPaymentCount(target?.paymentCount || 0)} liên quan sẽ bị xóa khỏi cơ sở dữ liệu.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        <AlertDialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Hủy
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            className="bg-red-600 hover:bg-red-700"
+            disabled={isSubmitting}
+            onClick={onConfirm}
+          >
+            {isSubmitting ? "Đang xóa..." : "Xóa vĩnh viễn"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export default function ArchivedCustomers() {
   const { customers } = useLoaderData<typeof loader>();
   const actionData = useActionData<ActionData>();
+  const deleteFetcher = useFetcher<DeleteFetcherData>();
+  const revalidator = useRevalidator();
   const [restoreTarget, setRestoreTarget] = useState<RestoreTarget | null>(() =>
     getRestoreTargetById(customers, actionData?.values?.customerId)
+  );
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+
+  const visibleCustomers = useMemo(
+    () => customers.filter((item) => !optimisticDeletedIds.has(item.customer._id)),
+    [customers, optimisticDeletedIds]
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [customers]);
+
+  useEffect(() => {
+    const pageCount = getPageCount(visibleCustomers.length);
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, visibleCustomers.length]);
+
+  const paginatedCustomers = useMemo(
+    () => paginateItems(visibleCustomers, page),
+    [page, visibleCustomers]
   );
 
   useEffect(() => {
@@ -520,8 +705,42 @@ export default function ArchivedCustomers() {
     }
   }, [actionData?.errors, actionData?.values?.customerId, customers]);
 
+  useEffect(() => {
+    if (deleteFetcher.state !== "idle" || !pendingDeleteId) {
+      return;
+    }
+
+    if (deleteFetcher.data?.error) {
+      setOptimisticDeletedIds((current) => {
+        const next = new Set(current);
+        next.delete(pendingDeleteId);
+        return next;
+      });
+      setDeleteError(deleteFetcher.data.error);
+    } else if (deleteFetcher.data?.ok) {
+      setDeleteTarget(null);
+      revalidator.revalidate();
+    }
+
+    setPendingDeleteId(null);
+  }, [deleteFetcher.data, deleteFetcher.state, pendingDeleteId, revalidator]);
+
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setDeleteError(null);
+    setPendingDeleteId(deleteTarget.id);
+    setOptimisticDeletedIds((current) => new Set(current).add(deleteTarget.id));
+    deleteFetcher.submit(
+      { intent: "deleteArchived", customerId: deleteTarget.id },
+      { method: "post" }
+    );
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <Breadcrumb items={[
         { label: "Bảng điều khiển", to: "/826264" },
         { label: "Thành viên lưu trữ" },
@@ -529,7 +748,7 @@ export default function ArchivedCustomers() {
 
       <PageHeader
         title="Thành viên lưu trữ"
-        description={`${customers.length} thành viên đang được lưu trữ`}
+        description={`${visibleCustomers.length} thành viên đang được lưu trữ`}
       >
         <Button variant="outline" asChild>
           <Link to="/826264">Về bảng điều khiển</Link>
@@ -542,28 +761,34 @@ export default function ArchivedCustomers() {
         </div>
       )}
 
+      {deleteError && !deleteTarget && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {deleteError}
+        </div>
+      )}
+
       <Card>
         <CardContent className="p-0">
-          {customers.length === 0 ? (
+          {visibleCustomers.length === 0 ? (
             <EmptyState icon={Archive} message="Chưa có thành viên lưu trữ" />
           ) : (
             <>
               <div className="hidden md:block">
-                <div className="overflow-hidden rounded-xl">
-                  <table className="min-w-full">
+                <div className="table-shell border-0 shadow-none">
+                  <table className="data-table">
                     <thead>
-                      <tr className="border-b border-zinc-100 bg-zinc-50/50">
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Tên</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Ngày lưu trữ</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Trạng thái</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Ngày hết hạn</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Thanh toán gần nhất</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">Thao tác</th>
+                      <tr>
+                        <th>Tên</th>
+                        <th>Ngày lưu trữ</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày hết hạn</th>
+                        <th>Thanh toán gần nhất</th>
+                        <th className="text-right">Thao tác</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100">
-                      {customers.map(({ customer, latestPayment, status }) => (
-                        <tr key={customer._id} className="transition-colors hover:bg-zinc-50/50">
+                    <tbody>
+                      {paginatedCustomers.map(({ customer, latestPayment, paymentCount, status }) => (
+                        <tr key={customer._id}>
                           <td className="px-4 py-3 text-sm">
                             <div>
                               <p className="font-medium text-zinc-900">{customer.name}</p>
@@ -588,14 +813,19 @@ export default function ArchivedCustomers() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm tabular-nums text-zinc-700">
-                            {latestPayment ? formatCurrency(latestPayment.amount, latestPayment.currency) : (
-                              <span className="text-zinc-300">Chưa có thanh toán</span>
-                            )}
+                            <div>
+                              {latestPayment ? formatCurrency(latestPayment.amount, latestPayment.currency) : (
+                                <span className="text-zinc-300">Chưa có thanh toán</span>
+                              )}
+                              <p className="mt-0.5 text-xs text-zinc-400">{formatPaymentCount(paymentCount)}</p>
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-right text-sm">
-                            <RestoreActions
+                            <ArchivedCustomerActions
                               customer={{ id: customer._id, name: customer.name }}
+                              paymentCount={paymentCount}
                               onRestoreWithPayment={setRestoreTarget}
+                              onDelete={setDeleteTarget}
                             />
                           </td>
                         </tr>
@@ -605,9 +835,9 @@ export default function ArchivedCustomers() {
                 </div>
               </div>
 
-              <div className="space-y-2 p-4 md:hidden">
-                {customers.map(({ customer, latestPayment, status }) => (
-                  <div key={customer._id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="reveal-list space-y-2 p-4 md:hidden">
+                {paginatedCustomers.map(({ customer, latestPayment, paymentCount, status }) => (
+                  <div key={customer._id} className="mobile-record">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-zinc-900">{customer.name}</p>
@@ -642,13 +872,16 @@ export default function ArchivedCustomers() {
                         ) : (
                           <span className="text-zinc-300">Chưa có thanh toán</span>
                         )}
+                        <span className="ml-1 text-zinc-400">({formatPaymentCount(paymentCount)})</span>
                       </div>
                     </div>
 
                     <div className="mt-3 border-t border-zinc-100 pt-3">
-                      <RestoreActions
+                      <ArchivedCustomerActions
                         customer={{ id: customer._id, name: customer.name }}
+                        paymentCount={paymentCount}
                         onRestoreWithPayment={setRestoreTarget}
+                        onDelete={setDeleteTarget}
                       />
                     </div>
                   </div>
@@ -659,6 +892,13 @@ export default function ArchivedCustomers() {
         </CardContent>
       </Card>
 
+      <PaginationControls
+        page={page}
+        totalItems={visibleCustomers.length}
+        itemLabel="thành viên"
+        onPageChange={setPage}
+      />
+
       <RestoreWithPaymentDialog
         target={restoreTarget}
         actionData={actionData}
@@ -667,6 +907,18 @@ export default function ArchivedCustomers() {
             setRestoreTarget(null);
           }
         }}
+      />
+      <DeleteArchivedCustomerDialog
+        target={deleteTarget}
+        error={deleteError}
+        isSubmitting={deleteFetcher.state !== "idle" && pendingDeleteId === deleteTarget?.id}
+        onOpenChange={(open) => {
+          if (!open && deleteFetcher.state === "idle") {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

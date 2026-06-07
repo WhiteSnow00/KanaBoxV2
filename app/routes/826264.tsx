@@ -18,6 +18,7 @@ import { ObjectId } from "mongodb";
 import { archiveCustomer } from "~/models/customer.server";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
+import ThemeToggle from "~/components/ThemeToggle";
 
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -67,15 +68,18 @@ function AdminNavigation() {
   const isActive = (path: string, exact: boolean) =>
     exact ? currentPath === path : currentPath.startsWith(path);
   return (
-    <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-900">
+    <nav className="sticky top-0 z-50 border-b border-white/70 bg-white/86 shadow-sm shadow-zinc-200/70 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/86 dark:shadow-black/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-14 items-center justify-between">
+        <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/826264" className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-500">
-                <span className="text-xs font-bold text-white">K</span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-zinc-950 shadow-sm dark:bg-white">
+                <span className="text-sm font-semibold text-white dark:text-zinc-950">K</span>
               </div>
-              <span className="text-sm font-semibold text-white">Quản trị</span>
+              <div>
+                <span className="block text-sm font-semibold text-zinc-950 dark:text-zinc-50">Quản trị</span>
+                <span className="block text-[11px] font-medium uppercase text-zinc-400 dark:text-zinc-500">Kana Box</span>
+              </div>
             </Link>
             <div className="hidden md:flex items-center gap-1">
               {navItems.map((item) => (
@@ -83,10 +87,10 @@ function AdminNavigation() {
                   key={item.to}
                   to={item.to}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200",
                     isActive(item.to, item.exact)
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                      ? "bg-zinc-950 text-white shadow-sm dark:bg-white dark:text-zinc-950"
+                      : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -95,19 +99,20 @@ function AdminNavigation() {
               ))}
             </div>
           </div>
-          <div className="hidden md:flex items-center">
+          <div className="hidden md:flex items-center gap-2">
             <Link
               to="/"
-              className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               Trang công khai
             </Link>
+            <ThemeToggle />
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="md:hidden text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -115,7 +120,7 @@ function AdminNavigation() {
         </div>
       </div>
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
+        <div className="animate-slide-up-fade border-t border-zinc-200 bg-white/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 md:hidden">
           <div className="px-3 py-3 space-y-1">
             {navItems.map((item) => (
               <Link
@@ -123,10 +128,10 @@ function AdminNavigation() {
                 to={item.to}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors",
                   isActive(item.to, item.exact)
-                    ? "bg-zinc-800 text-white"
-                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                    ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
+                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -136,11 +141,14 @@ function AdminNavigation() {
             <Link
               to="/"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
             >
               <ExternalLink className="h-4 w-4" />
               Trang công khai
             </Link>
+            <div className="px-3 pt-2">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       )}
@@ -149,9 +157,9 @@ function AdminNavigation() {
 }
 export default function AdminLayout() {
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen">
       <AdminNavigation />
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="page-shell">
         <Outlet />
       </main>
     </div>

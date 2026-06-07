@@ -101,6 +101,52 @@ export async function listPaymentsForCustomer(
     .toArray();
 }
 
+export async function countPaymentsForCustomer(customerId: string): Promise<number> {
+  if (!ObjectId.isValid(customerId)) {
+    return 0;
+  }
+
+  const db = await getDb();
+  const collection = db.collection<Payment>("payments");
+
+  return collection.countDocuments({ customerId: new ObjectId(customerId) });
+}
+
+export async function listPaymentCountsForAllCustomers(): Promise<Map<string, number>> {
+  const db = await getDb();
+  const collection = db.collection<Payment>("payments");
+
+  const results = await collection
+    .aggregate<{ _id: ObjectId; count: number }>([
+      {
+        $group: {
+          _id: "$customerId",
+          count: { $sum: 1 },
+        },
+      },
+    ])
+    .toArray();
+
+  const map = new Map<string, number>();
+  for (const result of results) {
+    map.set(result._id.toString(), result.count);
+  }
+
+  return map;
+}
+
+export async function deletePaymentsForCustomer(customerId: string): Promise<number> {
+  if (!ObjectId.isValid(customerId)) {
+    return 0;
+  }
+
+  const db = await getDb();
+  const collection = db.collection<Payment>("payments");
+
+  const result = await collection.deleteMany({ customerId: new ObjectId(customerId) });
+  return result.deletedCount;
+}
+
 export async function getLatestPaymentForCustomer(
   customerId: string
 ): Promise<Payment | null> {

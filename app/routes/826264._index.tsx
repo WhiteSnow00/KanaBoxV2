@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { defer, json } from "@remix-run/node";
 import { Await, Link, useLoaderData } from "@remix-run/react";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { ObjectId } from "mongodb";
 import {
   Ban,
@@ -27,7 +27,13 @@ import AdminMemberList, {
 } from "~/components/AdminMemberList";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { PageHeader, SearchField, StatCard } from "~/components/shared";
+import {
+  PageHeader,
+  PaginationControls,
+  SearchField,
+  StatCard,
+  paginateItems,
+} from "~/components/shared";
 
 export const meta: MetaFunction = () => [
   { title: "Bảng điều khiển - Quản trị - Kana Box V2" },
@@ -196,44 +202,63 @@ function formatMonth(monthBucket: string): string {
 }
 
 function RevenueTable({ monthlyTotals }: { monthlyTotals: MonthlyTotal[] }) {
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [monthlyTotals]);
+
+  const paginatedMonthlyTotals = useMemo(
+    () => paginateItems(monthlyTotals, page),
+    [monthlyTotals, page]
+  );
+
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-200">
-      <table className="min-w-full">
-        <thead>
-          <tr className="border-b border-zinc-100 bg-zinc-50/50">
-            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Tháng</th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">VND</th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">USD</th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">Tổng (quy đổi VND)</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-100">
-          {monthlyTotals.map((month) => (
-            <tr key={month.month} className="transition-colors hover:bg-zinc-50/50">
-              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-zinc-900">{formatMonth(month.month)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-zinc-600">
-                {month.vnd > 0 ? `${month.vnd.toLocaleString("vi-VN")} ₫` : <span className="text-zinc-300">—</span>}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-zinc-600">
-                {month.usd > 0 ? `$${month.usd.toFixed(2)}` : <span className="text-zinc-300">—</span>}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-indigo-600">
-                {month.convertedVnd > 0 ? `${month.convertedVnd.toLocaleString("vi-VN")} ₫` : <span className="text-zinc-300">—</span>}
-              </td>
+    <div className="space-y-3">
+      <div className="table-shell">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Tháng</th>
+              <th className="text-right">VND</th>
+              <th className="text-right">USD</th>
+              <th className="text-right">Tổng (quy đổi VND)</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {paginatedMonthlyTotals.map((month) => (
+              <tr key={month.month}>
+                <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-zinc-900">{formatMonth(month.month)}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-zinc-600">
+                  {month.vnd > 0 ? `${month.vnd.toLocaleString("vi-VN")} ₫` : <span className="text-zinc-300">—</span>}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-zinc-600">
+                  {month.usd > 0 ? `$${month.usd.toFixed(2)}` : <span className="text-zinc-300">—</span>}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-indigo-600">
+                  {month.convertedVnd > 0 ? `${month.convertedVnd.toLocaleString("vi-VN")} ₫` : <span className="text-zinc-300">—</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <PaginationControls
+        page={page}
+        totalItems={monthlyTotals.length}
+        itemLabel="tháng"
+        onPageChange={setPage}
+      />
     </div>
   );
 }
 
 function RevenueSkeleton() {
   return (
-    <div className="space-y-2 rounded-xl border border-zinc-200 p-4">
-      <div className="h-4 w-36 rounded bg-zinc-100" />
-      <div className="h-4 w-full rounded bg-zinc-100" />
-      <div className="h-4 w-5/6 rounded bg-zinc-100" />
+    <div className="surface space-y-2 p-4">
+      <div className="h-4 w-36 rounded bg-zinc-100 animate-pulse" />
+      <div className="h-4 w-full rounded bg-zinc-100 animate-pulse" />
+      <div className="h-4 w-5/6 rounded bg-zinc-100 animate-pulse" />
     </div>
   );
 }
@@ -257,13 +282,13 @@ export default function AdminDashboard() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="page-stack">
       <PageHeader
         title="Bảng điều khiển"
         description="Quản lý đăng ký và xem báo cáo doanh thu"
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="reveal-list grid grid-cols-2 gap-3 lg:grid-cols-6">
         <StatCard
           icon={Users}
           label="Tổng thành viên"
@@ -315,8 +340,8 @@ export default function AdminDashboard() {
             <SearchField
               value={searchTerm}
               onChange={setSearchTerm}
-              placeholder="Tìm kiếm..."
-              className="w-full sm:w-48"
+              placeholder="Tìm kiếm thành viên..."
+              className="w-full sm:w-64"
             />
             <Button asChild>
               <Link to="/826264/customers/new">

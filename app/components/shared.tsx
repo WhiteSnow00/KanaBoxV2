@@ -1,8 +1,9 @@
 import * as React from "react";
 import { Link } from "@remix-run/react";
-import { ArrowLeft, Search, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Search, X, type LucideIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import type { SubscriptionStatus } from "~/models/subscriptionStatus";
 
@@ -33,6 +34,107 @@ export const statusAccent: Record<string, string> = {
     expired: "border-l-red-400",
     none: "border-l-zinc-300",
 };
+
+export const DEFAULT_PAGE_SIZE = 20;
+
+export function getPageCount(totalItems: number, pageSize = DEFAULT_PAGE_SIZE): number {
+    return Math.max(1, Math.ceil(totalItems / pageSize));
+}
+
+export function paginateItems<T>(
+    items: T[],
+    page: number,
+    pageSize = DEFAULT_PAGE_SIZE
+): T[] {
+    const start = (page - 1) * pageSize;
+    return items.slice(start, start + pageSize);
+}
+
+export function PaginationControls({
+    page,
+    pageSize = DEFAULT_PAGE_SIZE,
+    totalItems,
+    itemLabel = "bản ghi",
+    onPageChange,
+}: {
+    page: number;
+    pageSize?: number;
+    totalItems: number;
+    itemLabel?: string;
+    onPageChange: (page: number) => void;
+}) {
+    const pageCount = getPageCount(totalItems, pageSize);
+
+    if (totalItems <= pageSize) {
+        return null;
+    }
+
+    const currentPage = Math.min(Math.max(page, 1), pageCount);
+    const start = (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, totalItems);
+    const pages = Array.from({ length: pageCount }, (_, index) => index + 1);
+    const visiblePages = pages.filter((candidate) => {
+        if (pageCount <= 5) {
+            return true;
+        }
+        if (candidate === 1 || candidate === pageCount) {
+            return true;
+        }
+        return Math.abs(candidate - currentPage) <= 1;
+    });
+
+    return (
+        <div className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white/80 px-3 py-2 text-sm text-zinc-500 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/70 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-medium">
+                {start}-{end} / {totalItems} {itemLabel}
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2"
+                    disabled={currentPage <= 1}
+                    onClick={() => onPageChange(currentPage - 1)}
+                    aria-label="Trang trước"
+                >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                {visiblePages.map((candidate, index) => {
+                    const previous = visiblePages[index - 1];
+                    const hasGap = previous !== undefined && candidate - previous > 1;
+
+                    return (
+                        <React.Fragment key={candidate}>
+                            {hasGap && <span className="px-1 text-xs text-zinc-400">...</span>}
+                            <Button
+                                type="button"
+                                variant={candidate === currentPage ? "default" : "outline"}
+                                size="sm"
+                                className="h-8 min-w-8 px-2"
+                                onClick={() => onPageChange(candidate)}
+                                aria-current={candidate === currentPage ? "page" : undefined}
+                            >
+                                {candidate}
+                            </Button>
+                        </React.Fragment>
+                    );
+                })}
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2"
+                    disabled={currentPage >= pageCount}
+                    onClick={() => onPageChange(currentPage + 1)}
+                    aria-label="Trang sau"
+                >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+            </div>
+        </div>
+    );
+}
 
 export function Breadcrumb({
     items,
@@ -71,12 +173,12 @@ export function PageHeader({
     children?: React.ReactNode;
 }) {
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{title}</h1>
-                {description && <p className="mt-1 text-sm text-zinc-500">{description}</p>}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+                <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50 sm:text-3xl">{title}</h1>
+                {description && <p className="mt-1.5 max-w-2xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">{description}</p>}
             </div>
-            {children}
+            {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}
         </div>
     );
 }
@@ -92,10 +194,10 @@ export function EmptyState({
 }) {
     return (
         <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 mb-3">
+            <div className="icon-tile mx-auto mb-3 h-12 w-12 rounded-lg">
                 <Icon className="h-5 w-5 text-zinc-400" />
             </div>
-            <p className="text-sm text-zinc-500">{message}</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">{message}</p>
             {children}
         </div>
     );
@@ -111,20 +213,20 @@ export function NoteBlock({
     text: string;
 }) {
     return (
-        <div className="rounded-lg bg-zinc-50 p-3">
+        <div className="soft-panel">
             <div className="flex items-center gap-2 mb-1">
                 <Icon className="h-3.5 w-3.5 text-zinc-400" />
-                <span className="text-xs font-medium text-zinc-500">{label}</span>
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</span>
             </div>
-            <p className="text-sm text-zinc-700 whitespace-pre-wrap">{text}</p>
+            <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">{text}</p>
         </div>
     );
 }
 
 export function FormErrorBanner({ message }: { message: string }) {
     return (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-            <p className="text-sm text-red-700">{message}</p>
+        <div className="animate-scale-fade rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-500/30 dark:bg-red-950/30">
+            <p className="text-sm text-red-700 dark:text-red-200">{message}</p>
         </div>
     );
 }
@@ -154,15 +256,25 @@ export function SearchField({
 }) {
     return (
         <div className={cn("relative", className)}>
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <Input
                 ref={inputRef}
                 type="text"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="pl-9"
+                className="pl-9 pr-9"
             />
+            {value && (
+                <button
+                    type="button"
+                    onClick={() => onChange("")}
+                    className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                    aria-label="Clear search"
+                >
+                    <X className="h-3.5 w-3.5" />
+                </button>
+            )}
         </div>
     );
 }
@@ -193,18 +305,20 @@ export function StatCard({
             type="button"
             onClick={onClick}
             className={cn(
-                "group rounded-xl border p-4 text-left transition-all",
+                "group rounded-lg border p-4 text-left shadow-sm transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/10",
                 bg,
                 isSelected
-                    ? `${border} ring-2 ${ring} shadow-sm`
-                    : `${border} hover:shadow-sm`
+                    ? `${border} ring-2 ${ring} shadow-md`
+                    : `${border}`
             )}
         >
-            <div className="flex items-center gap-2 mb-1">
-                <Icon className={cn("h-4 w-4", color)} />
-                <span className={cn("text-xs font-medium", color)}>{label}</span>
+            <div className="mb-2 flex items-center justify-between gap-2">
+                <span className={cn("text-xs font-semibold", color)}>{label}</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white/80 shadow-sm ring-1 ring-zinc-200/70">
+                    <Icon className={cn("h-4 w-4", color)} />
+                </span>
             </div>
-            <p className={cn("text-2xl font-semibold tabular-nums", color)}>{count}</p>
+            <p className="text-2xl font-semibold tabular-nums text-zinc-950 dark:text-zinc-50">{count}</p>
         </button>
     );
 }
@@ -220,11 +334,11 @@ export function InfoItem({
 }) {
     return (
         <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
+            <div className="icon-tile">
                 <Icon className="h-4 w-4 text-zinc-500" />
             </div>
             <div>
-                <p className="text-xs font-medium text-zinc-400">{label}</p>
+                <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">{label}</p>
                 {children}
             </div>
         </div>
@@ -251,7 +365,7 @@ export function CurrencySelect({
             value={value}
             onChange={(e) => onChange(e.target.value as "VND" | "USD")}
             className={cn(
-                "flex h-9 w-full rounded-lg border bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500",
+                "flex h-10 w-full rounded-md border bg-white/95 px-3 py-2 text-sm text-zinc-900 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-zinc-400 focus-visible:border-indigo-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/10 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100 dark:hover:border-zinc-600 dark:focus-visible:border-indigo-400 dark:focus-visible:ring-indigo-400/10",
                 error ? "border-red-300" : "border-zinc-300"
             )}
             required
@@ -280,10 +394,10 @@ export function AmountPresetChips({
                     type="button"
                     onClick={() => onSelect(preset)}
                     className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                        "rounded-md border px-3 py-1.5 text-xs font-semibold shadow-sm transition-[background-color,border-color,color,transform] duration-200 hover:-translate-y-0.5 active:translate-y-0",
                         Math.round(currentAmount) === preset
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-300"
-                            : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
+                            ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-500/50 dark:bg-indigo-950/40 dark:text-indigo-200"
+                            : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
                     )}
                 >
                     {preset / 1000}k
@@ -337,15 +451,15 @@ export function CurrencyAmountInput({
 
 export function MonthsRecommendation({ months }: { months: number }) {
     return (
-        <p className="text-xs text-zinc-500">
-            Gợi ý: <span className="font-medium text-indigo-600">{months}</span> tháng (theo số tiền)
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Gợi ý: <span className="font-medium text-indigo-600 dark:text-indigo-300">{months}</span> tháng (theo số tiền)
         </p>
     );
 }
 
 export function FormActions({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-end">
             {children}
         </div>
     );

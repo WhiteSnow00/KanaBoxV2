@@ -1,8 +1,9 @@
 import { Link, useFetcher, useRevalidator } from "@remix-run/react";
 import { useEffect, useMemo, useState } from "react";
-import { Archive, ChevronRight, CreditCard, Eye, Plus, StickyNote } from "lucide-react";
+import { Archive, ChevronRight, CreditCard, Eye, Pencil, Plus, StickyNote } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { PaginationControls, getPageCount, paginateItems } from "~/components/shared";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -134,6 +135,7 @@ export default function AdminMemberList({
   const [optimisticArchivedIds, setOptimisticArchivedIds] = useState<Set<string>>(new Set());
   const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (fetcher.state !== "idle" || !pendingArchiveId) {
@@ -157,6 +159,22 @@ export default function AdminMemberList({
   const visibleCustomers = useMemo(
     () => customers.filter((item) => !optimisticArchivedIds.has(item.customer._id)),
     [customers, optimisticArchivedIds]
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [customers, searchTerm, statusFilter, cancelledOnly]);
+
+  useEffect(() => {
+    const pageCount = getPageCount(visibleCustomers.length);
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, visibleCustomers.length]);
+
+  const paginatedCustomers = useMemo(
+    () => paginateItems(visibleCustomers, page),
+    [page, visibleCustomers]
   );
 
   const hasActiveFilter = searchTerm.trim() !== "" || statusFilter !== null || cancelledOnly;
@@ -188,8 +206,8 @@ export default function AdminMemberList({
         : undefined;
 
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100">
+      <div className="surface flex flex-col items-center justify-center py-16 text-center">
+        <div className="icon-tile mx-auto mb-4 h-14 w-14">
           <Eye className="h-6 w-6 text-zinc-400" />
         </div>
         <p className="text-base font-medium text-zinc-700">{title}</p>
@@ -208,21 +226,21 @@ export default function AdminMemberList({
       )}
 
       <div className="hidden md:block">
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-full">
+        <div className="table-shell">
+          <table className="data-table">
             <thead>
-              <tr className="border-b border-zinc-100 bg-zinc-50/50">
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Tên</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Trạng thái</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Còn lại</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Ngày hết hạn</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">Thanh toán gần nhất</th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">Thao tác</th>
+              <tr>
+                <th>Tên</th>
+                <th>Trạng thái</th>
+                <th>Còn lại</th>
+                <th>Ngày hết hạn</th>
+                <th>Thanh toán gần nhất</th>
+                <th className="text-right">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {visibleCustomers.map(({ customer, latestPayment, status }) => (
-                <tr key={customer._id} className="group transition-colors hover:bg-zinc-50/50">
+            <tbody>
+              {paginatedCustomers.map(({ customer, latestPayment, status }) => (
+                <tr key={customer._id} className="group">
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-2">
                       <Link
@@ -284,6 +302,12 @@ export default function AdminMemberList({
                           Xem
                         </Link>
                       </Button>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+                        <Link to={`${basePath}/${customer._id}/edit`}>
+                          <Pencil className="mr-1 h-3 w-3" />
+                          Sửa
+                        </Link>
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -302,12 +326,12 @@ export default function AdminMemberList({
         </div>
       </div>
 
-      <div className="space-y-2 md:hidden">
-        {visibleCustomers.map(({ customer, latestPayment, status }) => (
+      <div className="reveal-list space-y-2 md:hidden">
+        {paginatedCustomers.map(({ customer, latestPayment, status }) => (
           <div
             key={customer._id}
             className={cn(
-              "rounded-xl border border-zinc-200 border-l-[3px] bg-white p-4 shadow-sm",
+              "mobile-record border-l-[3px]",
               rowAccent[status.status] || "border-l-zinc-300"
             )}
           >
@@ -368,11 +392,17 @@ export default function AdminMemberList({
               </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-2 border-t border-zinc-100 pt-3">
+            <div className="mt-3 grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3">
               <Button variant="outline" size="sm" className="h-8 flex-1 text-xs" asChild>
                 <Link to={`/826264/payments/new?customerId=${customer._id}`}>
                   <CreditCard className="mr-1.5 h-3.5 w-3.5" />
                   Gia hạn
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 flex-1 text-xs" asChild>
+                <Link to={`${basePath}/${customer._id}/edit`}>
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                  Sửa
                 </Link>
               </Button>
               <Button
@@ -388,6 +418,13 @@ export default function AdminMemberList({
           </div>
         ))}
       </div>
+
+      <PaginationControls
+        page={page}
+        totalItems={visibleCustomers.length}
+        itemLabel="thành viên"
+        onPageChange={setPage}
+      />
 
       <AlertDialog open={!!archiveTarget} onOpenChange={(open) => { if (!open) setArchiveTarget(null); }}>
         <AlertDialogContent>

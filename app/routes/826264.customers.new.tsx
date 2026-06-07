@@ -248,7 +248,7 @@ export default function AdminAddCustomer() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="page-stack mx-auto max-w-2xl">
       <Breadcrumb items={[
         { label: "Bảng điều khiển", to: "/826264" },
         { label: "Thêm thành viên" },
@@ -265,7 +265,7 @@ export default function AdminAddCustomer() {
               <FormErrorBanner message={actionData.errors.form} />
             )}
 
-            <div className="space-y-4">
+            <div className="soft-panel space-y-4 bg-white/60">
               <div className="space-y-2">
                 <Label htmlFor="name">
                   Tên thành viên <span className="text-red-500">*</span>
@@ -300,8 +300,8 @@ export default function AdminAddCustomer() {
 
             <Separator />
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-zinc-900">Thanh toán ban đầu</h3>
+            <div className="soft-panel space-y-4 bg-white/60">
+              <h3 className="text-sm font-semibold text-zinc-950">Thanh toán ban đầu</h3>
 
               <div className="space-y-2">
                 <Label htmlFor="currency">

@@ -266,7 +266,7 @@ export default function AdminAddPayment() {
     : [{ label: "Bảng điều khiển", to: "/826264" }, { label: "Thêm thanh toán" }];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="page-stack mx-auto max-w-2xl">
       <Breadcrumb items={breadcrumbItems} />
 
       <Card>
@@ -294,7 +294,7 @@ export default function AdminAddPayment() {
                   id="customerId"
                   defaultValue={actionData?.values?.customerId || ""}
                   className={cn(
-                    "flex h-9 w-full rounded-lg border bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500",
+                    "flex h-10 w-full rounded-md border bg-white/95 px-3 py-2 text-sm text-zinc-900 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-zinc-400 focus-visible:border-indigo-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/10 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100 dark:hover:border-zinc-600 dark:focus-visible:border-indigo-400 dark:focus-visible:ring-indigo-400/10",
                     actionData?.errors?.customerId ? "border-red-300" : "border-zinc-300"
                   )}
                   required
@@ -307,7 +307,7 @@ export default function AdminAddPayment() {
               )}
               <FormMessage error={actionData?.errors?.customerId} />
               {customer && (
-                <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+                <div className="animate-scale-fade rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/30 dark:text-indigo-200">
                   {currentSubscription ? (
                     <>
                       Hết hạn hiện tại: <span className="font-medium tabular-nums">{currentSubscription.expiry}</span>

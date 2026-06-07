@@ -215,7 +215,7 @@ export default function AdminEditPayment() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="page-stack mx-auto max-w-2xl">
       <Breadcrumb items={[
         { label: customer.name, to: `/826264/customers/${customer._id}` },
         { label: "Sửa thanh toán" },

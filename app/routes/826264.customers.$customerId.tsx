@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, useFetcher, useLoaderData, useOutlet, Link, redirect, Form } from "@remix-run/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ObjectId } from "mongodb";
 import {
   Pencil, CreditCard, Archive, Eye, EyeOff,
@@ -33,7 +33,10 @@ import {
   Breadcrumb,
   EmptyState,
   NoteBlock,
+  PaginationControls,
   formatCurrency,
+  getPageCount,
+  paginateItems,
   statusAccent,
 } from "~/components/shared";
 
@@ -159,13 +162,31 @@ export default function AdminCustomerDetail() {
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const archiveFetcher = useFetcher<{ error?: string }>();
   const voidFetcher = useFetcher<{ error?: string }>();
+  const [paymentPage, setPaymentPage] = useState(1);
+  const latestPaymentId = payments[0]?._id;
+
+  useEffect(() => {
+    setPaymentPage(1);
+  }, [payments]);
+
+  useEffect(() => {
+    const pageCount = getPageCount(payments.length);
+    if (paymentPage > pageCount) {
+      setPaymentPage(pageCount);
+    }
+  }, [paymentPage, payments.length]);
+
+  const paginatedPayments = useMemo(
+    () => paginateItems(payments, paymentPage),
+    [paymentPage, payments]
+  );
 
   if (outlet) {
     return outlet;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <Breadcrumb items={[
         { label: "Bảng điều khiển", to: "/826264" },
         { label: customer.name },
@@ -268,7 +289,7 @@ export default function AdminCustomerDetail() {
               <NoteBlock icon={StickyNote} label="Ghi chú" text={customer.note} />
             )}
             {customer.nameHistory.length > 0 && (
-              <div className="rounded-lg bg-zinc-50 p-3">
+              <div className="soft-panel">
                 <p className="mb-2 text-xs font-medium text-zinc-500">Lịch sử đổi tên</p>
                 <div className="space-y-1">
                   {customer.nameHistory.map((entry, index) => (
@@ -300,22 +321,22 @@ export default function AdminCustomerDetail() {
           ) : (
             <>
               <div className="hidden md:block">
-                <div className="rounded-xl border border-zinc-200 overflow-hidden">
-                  <table className="min-w-full">
+                <div className="table-shell">
+                  <table className="data-table">
                     <thead>
-                      <tr className="border-b border-zinc-100 bg-zinc-50/50">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Ngày thanh toán</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Ngày hết hạn</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Số tiền</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Số tháng</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Trạng thái</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 uppercase tracking-wider">Thao tác</th>
+                      <tr>
+                        <th>Ngày thanh toán</th>
+                        <th>Ngày hết hạn</th>
+                        <th>Số tiền</th>
+                        <th>Số tháng</th>
+                        <th>Trạng thái</th>
+                        <th className="text-right">Thao tác</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100">
-                      {payments.map((payment, index) => {
+                    <tbody>
+                      {paginatedPayments.map((payment) => {
                         const paymentStatus = computeStatus(payment.endDate);
-                        const isLatest = index === 0;
+                        const isLatest = payment._id === latestPaymentId;
 
                         return (
                           <tr key={payment._id} className={cn("transition-colors hover:bg-zinc-50/50", isLatest && "bg-indigo-50/30")}>
@@ -349,12 +370,12 @@ export default function AdminCustomerDetail() {
                 </div>
               </div>
 
-              <div className="md:hidden space-y-2">
-                {payments.map((payment, index) => {
+              <div className="reveal-list space-y-2 md:hidden">
+                {paginatedPayments.map((payment) => {
                   const paymentStatus = computeStatus(payment.endDate);
-                  const isLatest = index === 0;
+                  const isLatest = payment._id === latestPaymentId;
                   return (
-                    <div key={payment._id} className={cn("rounded-xl border p-4", isLatest ? "border-indigo-200 bg-indigo-50/20" : "border-zinc-200")}>
+                    <div key={payment._id} className={cn("mobile-record", isLatest ? "border-indigo-200 bg-indigo-50/30" : "border-zinc-200")}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Badge variant={statusVariant[paymentStatus.status] || "none"}>{paymentStatus.label}</Badge>
@@ -383,6 +404,12 @@ export default function AdminCustomerDetail() {
                   );
                 })}
               </div>
+              <PaginationControls
+                page={paymentPage}
+                totalItems={payments.length}
+                itemLabel="thanh toán"
+                onPageChange={setPaymentPage}
+              />
             </>
           )}
         </CardContent>

@@ -82,7 +82,7 @@ export default function PublicCustomerDetail() {
   const strings = getPublicStrings(lang);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="page-stack mx-auto max-w-2xl">
       <div className="flex justify-end">
         <PublicLanguageSelect
           lang={lang}
@@ -116,7 +116,7 @@ export default function PublicCustomerDetail() {
         </CardHeader>
         <CardContent>
           {latestPayment ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="reveal-list grid grid-cols-1 gap-4 sm:grid-cols-2">
               <InfoItem icon={CalendarDays} label={strings.customerDetail.currentPeriodEnds}>
                 <p className={cn(
                   "mt-0.5 text-base font-semibold tabular-nums",

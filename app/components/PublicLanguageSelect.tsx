@@ -28,7 +28,7 @@ export default function PublicLanguageSelect({
           nextParams.set("lang", nextLang);
           setSearchParams(nextParams);
         }}
-        className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-colors"
+        className="h-10 rounded-md border border-zinc-300 bg-white/95 px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-200 dark:hover:border-zinc-600 dark:focus:border-indigo-400 dark:focus:ring-indigo-400/10"
         aria-label={label}
       >
         <option value="vi">{optionVi}</option>

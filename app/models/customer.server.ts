@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
-import { getDb } from "~/utils/db.server";
+import { getDb, getMongoClient } from "~/utils/db.server";
 import { getTodayDateOnly } from "~/utils/date";
+import type { Payment } from "~/models/payment.server";
 
 export interface NameHistoryEntry {
   name: string;
@@ -26,6 +27,11 @@ export interface Customer {
 export interface CustomerInput {
   displayName: string;
   note?: string;
+}
+
+export interface ArchivedCustomerDeletionResult {
+  deletedCustomerCount: number;
+  deletedPaymentCount: number;
 }
 
 function escapeRegExp(value: string): string {
@@ -312,6 +318,56 @@ export async function archiveCustomer(id: string): Promise<Customer | null> {
   );
 
   return result;
+}
+
+export async function deleteArchivedCustomerWithPayments(
+  id: string
+): Promise<ArchivedCustomerDeletionResult | null> {
+  if (!ObjectId.isValid(id)) {
+    return null;
+  }
+
+  const customerObjectId = new ObjectId(id);
+  const client = await getMongoClient();
+  const db = await getDb();
+  const session = client.startSession();
+
+  try {
+    const result = await session.withTransaction(async () => {
+      const customers = db.collection<Customer>("customers");
+      const payments = db.collection<Payment>("payments");
+
+      const customer = await customers.findOne(
+        { _id: customerObjectId },
+        { session }
+      );
+      if (!customer || !customer.isArchived) {
+        return null;
+      }
+
+      const deletedPayments = await payments.deleteMany(
+        { customerId: customerObjectId },
+        { session }
+      );
+      const deletedCustomer = await customers.deleteOne(
+        { _id: customerObjectId, isArchived: true },
+        { session }
+      );
+
+      if (deletedCustomer.deletedCount !== 1) {
+        throw new Error("Archived customer delete failed");
+      }
+
+      return {
+        deletedCustomerCount: deletedCustomer.deletedCount,
+        deletedPaymentCount: deletedPayments.deletedCount,
+      };
+    });
+
+    return result ?? null;
+  } finally {
+    await session.endSession();
+  }
 }
 
 /** @deprecated Use archiveCustomer instead. This soft-archives and never deletes from the DB. */

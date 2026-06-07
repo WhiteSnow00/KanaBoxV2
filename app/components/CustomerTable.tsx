@@ -1,6 +1,8 @@
 import { Link } from "@remix-run/react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Eye, StickyNote } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
+import { PaginationControls, paginateItems } from "~/components/shared";
 import { cn } from "~/lib/utils";
 
 export interface CustomerWithStatus {
@@ -80,6 +82,7 @@ export default function CustomerTable({
   filteredEmptyTitle,
   filteredEmptySubtitle,
 }: CustomerTableProps) {
+  const [page, setPage] = useState(1);
   const t: CustomerTableI18n =
     i18n || ({
       emptyTitle: "Chưa có thành viên nào",
@@ -94,13 +97,22 @@ export default function CustomerTable({
       view: "Xem",
     } satisfies CustomerTableI18n);
 
+  useEffect(() => {
+    setPage(1);
+  }, [customers]);
+
+  const paginatedCustomers = useMemo(
+    () => paginateItems(customers, page),
+    [customers, page]
+  );
+
   if (customers.length === 0) {
     const emptyTitle = isFilteredEmpty && filteredEmptyTitle ? filteredEmptyTitle : t.emptyTitle;
     const emptySubtitle = isFilteredEmpty ? filteredEmptySubtitle : t.emptySubtitle;
 
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100">
+      <div className="surface flex flex-col items-center justify-center py-16 text-center">
+        <div className="icon-tile mx-auto mb-4 h-14 w-14">
           <Eye className="h-6 w-6 text-zinc-400" />
         </div>
         <p className="text-base font-medium text-zinc-700">{emptyTitle}</p>
@@ -114,21 +126,21 @@ export default function CustomerTable({
   return (
     <>
       <div className="hidden md:block">
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-full">
+        <div className="table-shell">
+          <table className="data-table">
             <thead>
-              <tr className="border-b border-zinc-100 bg-zinc-50/50">
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">{t.headers.name}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">{t.headers.status}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">{t.headers.endDate}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">{t.headers.latestPayment}</th>
+              <tr>
+                <th>{t.headers.name}</th>
+                <th>{t.headers.status}</th>
+                <th>{t.headers.endDate}</th>
+                <th>{t.headers.latestPayment}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {customers.map(({ customer, latestPayment, status }) => (
+            <tbody>
+              {paginatedCustomers.map(({ customer, latestPayment, status }) => (
                 <tr
                   key={customer._id}
-                  className="group transition-colors hover:bg-zinc-50/50"
+                  className="group"
                 >
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-2">
@@ -169,12 +181,12 @@ export default function CustomerTable({
         </div>
       </div>
 
-      <div className="space-y-2 md:hidden">
-        {customers.map(({ customer, latestPayment, status }) => (
+      <div className="reveal-list space-y-2 md:hidden">
+        {paginatedCustomers.map(({ customer, latestPayment, status }) => (
           <div
             key={customer._id}
             className={cn(
-              "rounded-xl border border-zinc-200 border-l-[3px] bg-white p-4 shadow-sm",
+              "mobile-record border-l-[3px]",
               rowAccent[status.status] || "border-l-zinc-300"
             )}
           >
@@ -227,6 +239,12 @@ export default function CustomerTable({
           </div>
         ))}
       </div>
+      <PaginationControls
+        page={page}
+        totalItems={customers.length}
+        itemLabel={t.view === "View" ? "members" : "thành viên"}
+        onPageChange={setPage}
+      />
     </>
   );
 }

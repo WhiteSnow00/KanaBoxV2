@@ -32,6 +32,10 @@ export async function getDb(): Promise<Db> {
   return client.db(MONGODB_DB_NAME);
 }
 
+export async function getMongoClient(): Promise<MongoClient> {
+  return clientPromise;
+}
+
 export async function closeDbConnection(): Promise<void> {
   if (global.__mongoClientPromise) {
     const client = await clientPromise;

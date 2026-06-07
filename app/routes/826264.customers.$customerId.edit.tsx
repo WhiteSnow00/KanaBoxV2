@@ -62,6 +62,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
       _id: customer._id.toString(),
       displayName: customer.displayName,
       note: customer.note,
+      isArchived: customer.isArchived || false,
     },
   });
 }
@@ -111,7 +112,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
       throw new Response("Không tìm thấy thành viên", { status: 404 });
     }
 
-    return redirect(`/826264/customers/${customerId}`);
+    return redirect(
+      result.isArchived ? "/826264/customers/archived" : `/826264/customers/${customerId}`
+    );
   } catch (error) {
     if (isDuplicateDisplayNameError(error)) {
       return json<ActionData>(
@@ -137,11 +140,15 @@ export async function action({ request, params }: ActionFunctionArgs) {
 export default function AdminEditCustomer() {
   const { customer } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
+  const returnTo = customer.isArchived
+    ? "/826264/customers/archived"
+    : `/826264/customers/${customer._id}`;
+  const returnLabel = customer.isArchived ? "Thành viên lưu trữ" : customer.displayName;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="page-stack mx-auto max-w-2xl">
       <Breadcrumb items={[
-        { label: customer.displayName, to: `/826264/customers/${customer._id}` },
+        { label: returnLabel, to: returnTo },
         { label: "Sửa" },
       ]} />
 
@@ -188,7 +195,7 @@ export default function AdminEditCustomer() {
 
             <FormActions>
               <Button variant="outline" asChild>
-                <Link to={`/826264/customers/${customer._id}`}>Hủy</Link>
+                <Link to={returnTo}>Hủy</Link>
               </Button>
               <Button type="submit">Lưu thay đổi</Button>
             </FormActions>
