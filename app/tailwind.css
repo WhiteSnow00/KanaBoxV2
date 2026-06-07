@@ -15,8 +15,12 @@
   .dark {
     --page-bg: #09090b;
     --panel-bg: rgba(24, 24, 27, 0.82);
-    --panel-border: rgba(63, 63, 70, 0.76);
-    --panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 18px 38px rgba(0, 0, 0, 0.34);
+    --panel-border: rgba(82, 82, 91, 0.48);
+    --panel-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 8px rgba(255, 255, 255, 0.03),
+      0 1px 2px rgba(0, 0, 0, 0.32),
+      0 18px 38px rgba(0, 0, 0, 0.28);
   }
 
   html {
@@ -51,7 +55,7 @@
   }
 
   .dark * {
-    @apply border-zinc-800;
+    border-color: rgb(63 63 70 / 0.76);
   }
 
   ::selection {
@@ -80,14 +84,19 @@
   }
 
   .table-shell {
-    @apply overflow-hidden rounded-lg border border-zinc-200/80 bg-white/95 shadow-sm shadow-zinc-200/70;
+    @apply overflow-hidden rounded-lg border border-zinc-200/80 bg-white/95;
+    box-shadow:
+      0 1px 3px rgba(15, 23, 42, 0.06),
+      0 4px 12px rgba(15, 23, 42, 0.04);
   }
 
   .dark .table-shell {
     background-color: rgb(9 9 11 / 0.7);
-    border-color: rgb(39 39 42 / 0.8);
-    --tw-shadow-color: rgb(0 0 0 / 0.2);
-    --tw-shadow: var(--tw-shadow-colored);
+    border-color: rgb(63 63 70 / 0.52);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 10px rgba(255, 255, 255, 0.025),
+      0 1px 3px rgb(0 0 0 / 0.3);
   }
 
   .data-table {
@@ -100,7 +109,7 @@
 
   .dark .data-table thead tr {
     background-color: rgb(24 24 27 / 0.8);
-    border-color: rgb(39 39 42 / 0.8);
+    border-color: rgb(63 63 70 / 0.56);
   }
 
   .data-table th {
@@ -116,7 +125,7 @@
   }
 
   .dark .data-table tbody {
-    border-color: rgb(39 39 42);
+    --tw-divide-color: rgb(63 63 70 / 0.44);
   }
 
   .data-table tbody tr {
@@ -124,50 +133,66 @@
   }
 
   .dark .data-table tbody tr {
-    --dark-row-accent: inset 3px 0 0 rgba(129, 140, 248, 0.54);
+    border-color: rgb(63 63 70 / 0.44);
   }
 
   .dark .data-table tbody tr:hover {
     background-color: rgb(24 24 27 / 0.8);
-    box-shadow: var(--dark-row-accent);
+    box-shadow:
+      inset 3px 0 0 rgba(129, 140, 248, 0.54),
+      0 0 12px rgba(99, 102, 241, 0.06);
   }
 
   .mobile-record {
-    @apply rounded-lg border border-zinc-200/80 bg-white/95 p-4 shadow-sm shadow-zinc-200/70 transition-[border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md;
+    @apply rounded-lg border border-zinc-200/80 bg-white/95 p-4 transition-[border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md;
+    box-shadow:
+      0 1px 3px rgba(15, 23, 42, 0.06),
+      0 4px 12px rgba(15, 23, 42, 0.04);
   }
 
   .dark .mobile-record {
     background-color: rgb(9 9 11 / 0.7);
-    border-color: rgb(39 39 42 / 0.9);
-    --tw-shadow-color: rgb(0 0 0 / 0.2);
-    --tw-shadow: var(--tw-shadow-colored);
+    border-color: rgb(63 63 70 / 0.52);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 10px rgba(255, 255, 255, 0.025),
+      0 1px 3px rgb(0 0 0 / 0.24);
   }
 
   .dark .mobile-record:hover {
-    border-color: rgb(63 63 70);
-    --tw-shadow-color: rgb(0 0 0 / 0.3);
-    --tw-shadow: var(--tw-shadow-colored);
+    border-color: rgb(82 82 91 / 0.66);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 0 16px rgba(255, 255, 255, 0.035),
+      0 4px 12px rgb(0 0 0 / 0.32);
   }
 
   .soft-panel {
     @apply rounded-lg border border-zinc-200/80 bg-zinc-50/80 p-3;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 
   .dark .soft-panel {
     background-color: rgb(24 24 27 / 0.7);
-    border-color: rgb(39 39 42 / 0.8);
+    border-color: rgb(63 63 70 / 0.52);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 10px rgba(255, 255, 255, 0.03);
   }
 
   .icon-tile {
-    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 shadow-sm;
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
   }
 
   .dark .icon-tile {
     background-color: rgb(24 24 27);
-    border-color: rgb(39 39 42);
+    border-color: rgb(63 63 70 / 0.6);
     color: rgb(161 161 170);
-    --tw-shadow-color: rgb(0 0 0 / 0.2);
-    --tw-shadow: var(--tw-shadow-colored);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 6px rgba(255, 255, 255, 0.02),
+      0 1px 2px rgb(0 0 0 / 0.24);
   }
 
   .form-grid {
@@ -281,7 +306,7 @@
   .dark .border-zinc-200,
   .dark .border-zinc-200\/80,
   .dark .border-zinc-300 {
-    border-color: rgb(63 63 70 / 0.86);
+    border-color: rgb(63 63 70 / 0.64);
   }
 
   .dark .border-indigo-100,

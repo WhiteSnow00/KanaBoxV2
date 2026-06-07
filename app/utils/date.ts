@@ -65,10 +65,6 @@ export function addMonthsDateOnly(dateString: string, months: number): string {
   return formatDateOnly(date);
 }
 
-export function addMonthsAsDays(dateString: string, months: number): string {
-  return addMonthsDateOnly(dateString, months);
-}
-
 export function getMonthBucket(dateString: string): string {
   const date = parseDateOnly(dateString);
   const day = date.getDate();
@@ -99,20 +95,6 @@ export function getRevenueBucketRange(monthBucket: string): { start: string; end
   return { start, end };
 }
 
-export function getRecentMonthBuckets(count: number): string[] {
-  const buckets: string[] = [];
-  const today = new Date();
-
-  for (let i = 0; i < count; i++) {
-    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    buckets.push(`${year}-${month}`);
-  }
-
-  return buckets;
-}
-
 export function isValidDateOnly(dateString: string): boolean {
   try {
     parseDateOnly(dateString);
@@ -120,8 +102,4 @@ export function isValidDateOnly(dateString: string): boolean {
   } catch {
     return false;
   }
-}
-
-export function compareDateOnly(a: string, b: string): number {
-  return diffDaysDateOnly(a, b);
 }

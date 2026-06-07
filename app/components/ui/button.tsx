@@ -10,8 +10,8 @@ const buttonVariants = cva(
             variant: {
                 default: "border border-indigo-600 bg-indigo-600 text-white hover:border-indigo-700 hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-200/70 dark:hover:shadow-indigo-950/40",
                 destructive: "border border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700 hover:shadow-md hover:shadow-red-200/70 dark:hover:shadow-red-950/40",
-                outline: "border border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
-                secondary: "border border-zinc-200 bg-zinc-100 text-zinc-900 hover:border-zinc-300 hover:bg-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800",
+                outline: "border border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-950 dark:border-zinc-600/60 dark:bg-zinc-900/80 dark:text-zinc-200 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_0_8px_rgba(255,255,255,0.025)] dark:hover:border-zinc-500/70 dark:hover:bg-zinc-800/90 dark:hover:text-zinc-50 dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_12px_rgba(255,255,255,0.04)]",
+                secondary: "border border-zinc-200 bg-zinc-100 text-zinc-900 hover:border-zinc-300 hover:bg-zinc-200 dark:border-zinc-600/50 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-500/60 dark:hover:bg-zinc-800",
                 ghost: "border border-transparent bg-transparent text-zinc-700 shadow-none hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-50",
                 link: "text-indigo-600 underline-offset-4 hover:underline dark:text-indigo-300",
                 success: "border border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700",

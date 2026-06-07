@@ -14,18 +14,11 @@ import { cn } from "~/lib/utils";
 import {
   formatCurrency,
   statusAccent,
+  statusVariant,
   NoteBlock,
   EmptyState,
   InfoItem,
 } from "~/components/shared";
-
-const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
-  active: "active",
-  due: "due",
-  grace: "grace",
-  expired: "expired",
-  none: "none",
-};
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
   {

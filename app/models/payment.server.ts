@@ -66,6 +66,7 @@ export async function createPayment(input: PaymentInput): Promise<Payment> {
       : Math.round(input.amount * 100) / 100;
 
   const now = new Date();
+  const trimmedNote = input.note?.trim();
   const payment: Omit<Payment, "_id"> = {
     customerId: new ObjectId(input.customerId),
     paidDate: input.paidDate,
@@ -73,7 +74,7 @@ export async function createPayment(input: PaymentInput): Promise<Payment> {
     amount: sanitizedAmount,
     months: input.months,
     endDate,
-    note: input.note?.trim() || undefined,
+    ...(trimmedNote ? { note: trimmedNote } : {}),
     createdAt: now,
   };
 
@@ -97,7 +98,7 @@ export async function listPaymentsForCustomer(
 
   return collection
     .find({ customerId: new ObjectId(customerId), isVoided: { $ne: true } })
-    .sort({ paidDate: -1 })
+    .sort({ paidDate: -1, _id: -1 })
     .toArray();
 }
 
@@ -109,7 +110,10 @@ export async function countPaymentsForCustomer(customerId: string): Promise<numb
   const db = await getDb();
   const collection = db.collection<Payment>("payments");
 
-  return collection.countDocuments({ customerId: new ObjectId(customerId) });
+  return collection.countDocuments({
+    customerId: new ObjectId(customerId),
+    isVoided: { $ne: true },
+  });
 }
 
 export async function listPaymentCountsForAllCustomers(): Promise<Map<string, number>> {
@@ -118,6 +122,9 @@ export async function listPaymentCountsForAllCustomers(): Promise<Map<string, nu
 
   const results = await collection
     .aggregate<{ _id: ObjectId; count: number }>([
+      {
+        $match: { isVoided: { $ne: true } },
+      },
       {
         $group: {
           _id: "$customerId",
@@ -159,7 +166,7 @@ export async function getLatestPaymentForCustomer(
 
   return collection
     .find({ customerId: new ObjectId(customerId), isVoided: { $ne: true } })
-    .sort({ paidDate: -1 })
+    .sort({ paidDate: -1, _id: -1 })
     .limit(1)
     .next();
 }
@@ -179,7 +186,7 @@ export async function listLatestPaymentsForAllCustomers(): Promise<
         $match: { isVoided: { $ne: true } },
       },
       {
-        $sort: { paidDate: -1 },
+        $sort: { paidDate: -1, _id: -1 },
       },
       {
         $group: {
@@ -302,19 +309,28 @@ export async function updatePayment(
       ? Math.round(updates.amount)
       : Math.round(updates.amount * 100) / 100;
 
+  const trimmedNote = updates.note?.trim();
+  const setOps: Record<string, unknown> = {
+    paidDate: updates.paidDate,
+    currency: updates.currency,
+    amount: sanitizedAmount,
+    months: updates.months,
+    endDate,
+    updatedAt: new Date(),
+  };
+
+  if (trimmedNote) {
+    setOps.note = trimmedNote;
+  }
+
+  const updateDoc: Record<string, unknown> = { $set: setOps };
+  if (!trimmedNote) {
+    updateDoc.$unset = { note: "" };
+  }
+
   const result = await collection.findOneAndUpdate(
     { _id: new ObjectId(id) },
-    {
-      $set: {
-        paidDate: updates.paidDate,
-        currency: updates.currency,
-        amount: sanitizedAmount,
-        months: updates.months,
-        endDate,
-        note: updates.note?.trim() || undefined,
-        updatedAt: new Date(),
-      },
-    },
+    updateDoc,
     { returnDocument: "after" }
   );
 
@@ -351,24 +367,25 @@ export function computeMonthlyTotals(
     totals.set(bucket, { VND: 0, USD: 0, convertedVnd: 0 });
   }
 
+  // Build a lookup from bucket → range for O(1) access
+  const bucketSet = new Set(monthBuckets);
+
   for (const payment of payments) {
-    for (const bucket of monthBuckets) {
-      const { start, end } = getRevenueBucketRange(bucket);
-      if (payment.paidDate >= start && payment.paidDate <= end) {
-        const current = totals.get(bucket)!;
-        if (payment.currency === "VND") {
-          current.VND += Math.round(payment.amount);
-        } else {
-          current.USD = Math.round((current.USD + payment.amount) * 100) / 100;
-        }
-        break;
-      }
+    const bucket = getMonthBucket(payment.paidDate);
+    if (!bucketSet.has(bucket)) {
+      continue;
+    }
+
+    const current = totals.get(bucket)!;
+    if (payment.currency === "VND") {
+      current.VND += Math.round(payment.amount);
+    } else {
+      current.USD = Math.round((current.USD + payment.amount) * 100) / 100;
     }
   }
 
-  for (const [bucket, data] of totals) {
+  for (const [, data] of totals) {
     data.convertedVnd = Math.round(data.VND + data.USD * USD_TO_VND_RATE);
-    totals.set(bucket, data);
   }
 
   return totals;

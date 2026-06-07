@@ -3,7 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Archive, ChevronRight, CreditCard, Eye, Pencil, Plus, StickyNote } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { PaginationControls, getPageCount, paginateItems } from "~/components/shared";
+import {
+  PaginationControls,
+  getPageCount,
+  paginateItems,
+  formatCurrency,
+  statusVariant,
+} from "~/components/shared";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -53,14 +59,6 @@ type ArchiveFetcherData = {
   customerId?: string;
 };
 
-const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
-  active: "active",
-  due: "due",
-  grace: "grace",
-  expired: "expired",
-  none: "none",
-};
-
 const rowAccent: Record<string, string> = {
   active: "border-l-emerald-400",
   due: "border-l-amber-400",
@@ -68,13 +66,6 @@ const rowAccent: Record<string, string> = {
   expired: "border-l-red-400",
   none: "border-l-zinc-300",
 };
-
-function formatAmount(amount: number, currency: string): string {
-  if (currency === "VND") {
-    return `${Math.round(amount).toLocaleString("vi-VN")} ₫`;
-  }
-  return `$${amount.toFixed(2)}`;
-}
 
 function formatDays(status: StatusInfo): string {
   if (status.daysToEnd !== null) {
@@ -290,7 +281,7 @@ export default function AdminMemberList({
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm tabular-nums text-zinc-700">
-                    {latestPayment ? formatAmount(latestPayment.amount, latestPayment.currency) : (
+                    {latestPayment ? formatCurrency(latestPayment.amount, latestPayment.currency) : (
                       <span className="text-zinc-300">Chưa có thanh toán</span>
                     )}
                   </td>
@@ -384,7 +375,7 @@ export default function AdminMemberList({
                 <span className="text-zinc-400">Thanh toán:</span>{" "}
                 {latestPayment ? (
                   <span className="font-medium text-zinc-700">
-                    {formatAmount(latestPayment.amount, latestPayment.currency)}
+                    {formatCurrency(latestPayment.amount, latestPayment.currency)}
                   </span>
                 ) : (
                   <span className="text-zinc-300">Chưa có thanh toán</span>

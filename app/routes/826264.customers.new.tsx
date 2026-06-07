@@ -14,7 +14,7 @@ import {
   BASE_PRICE_VND,
   BASE_PRICE_USD,
 } from "~/models/subscriptionStatus";
-import { getTodayDateOnly } from "~/utils/date";
+import { getTodayDateOnly, isValidDateOnly } from "~/utils/date";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -88,8 +88,7 @@ export async function action({ request }: ActionFunctionArgs) {
     errors.months = "Số tháng tối thiểu là 1";
   }
 
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!paidDate || !dateRegex.test(paidDate)) {
+  if (!paidDate || !isValidDateOnly(paidDate)) {
     errors.paidDate = "Vui lòng nhập ngày hợp lệ (YYYY-MM-DD)";
   }
 
@@ -177,14 +176,24 @@ export async function action({ request }: ActionFunctionArgs) {
     const customer = await createCustomer({ displayName, note: note || undefined });
     const customerId = customer._id.toString();
 
-    await createPayment({
-      customerId,
-      paidDate,
-      currency,
-      amount,
-      months,
-      note: paymentNote || undefined,
-    });
+    try {
+      await createPayment({
+        customerId,
+        paidDate,
+        currency,
+        amount,
+        months,
+        note: paymentNote || undefined,
+      });
+    } catch (paymentError) {
+      // Rollback: archive the orphan customer to avoid inconsistency
+      try {
+        await archiveCustomer(customerId);
+      } catch (rollbackError) {
+        console.error("Error rolling back customer creation:", rollbackError);
+      }
+      throw paymentError;
+    }
 
     return redirect(`/826264/customers/${customerId}`);
   } catch (error) {

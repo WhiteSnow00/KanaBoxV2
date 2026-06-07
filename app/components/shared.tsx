@@ -7,7 +7,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import type { SubscriptionStatus } from "~/models/subscriptionStatus";
 
-const statusVariantMap: Record<SubscriptionStatus, "active" | "due" | "grace" | "expired" | "none"> = {
+export const statusVariant: Record<SubscriptionStatus, "active" | "due" | "grace" | "expired" | "none"> = {
     active: "active",
     due: "due",
     grace: "grace",
@@ -16,7 +16,7 @@ const statusVariantMap: Record<SubscriptionStatus, "active" | "due" | "grace" | 
 };
 
 export function StatusBadge({ status, label }: { status: string; label: string }) {
-    const variant = statusVariantMap[status as SubscriptionStatus] || "none";
+    const variant = statusVariant[status as SubscriptionStatus] || "none";
     return <Badge variant={variant}>{label}</Badge>;
 }
 

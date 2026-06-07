@@ -1,8 +1,7 @@
-import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
-import { defer, json } from "@remix-run/node";
+import type { MetaFunction } from "@remix-run/node";
+import { defer } from "@remix-run/node";
 import { Await, Link, useLoaderData } from "@remix-run/react";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { ObjectId } from "mongodb";
 import {
   Ban,
   CheckCircle,
@@ -13,7 +12,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { archiveCustomer, countCustomers, listCustomers } from "~/models/customer.server";
+import { countCustomers, listCustomers } from "~/models/customer.server";
 import {
   computeMonthlyTotals,
   computeStatus,
@@ -85,43 +84,6 @@ async function loadMonthlyTotals(): Promise<MonthlyTotal[]> {
       convertedVnd: totals.convertedVnd,
     };
   });
-}
-
-export async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") || "");
-
-  if (intent === "archive") {
-    const customerId = String(formData.get("customerId") || "");
-    if (!customerId || !ObjectId.isValid(customerId)) {
-      return json(
-        { ok: false, error: "ID thành viên không hợp lệ" },
-        { status: 400 }
-      );
-    }
-
-    try {
-      const archived = await archiveCustomer(customerId);
-      if (!archived) {
-        return json(
-          { ok: false, error: "Không tìm thấy thành viên", customerId },
-          { status: 404 }
-        );
-      }
-      return json({ ok: true, customerId });
-    } catch (error) {
-      console.error("Error archiving customer:", error);
-      return json(
-        { ok: false, error: "Lưu trữ thành viên thất bại. Vui lòng thử lại.", customerId },
-        { status: 500 }
-      );
-    }
-  }
-
-  return json(
-    { ok: false, error: "Thao tác không hợp lệ" },
-    { status: 400 }
-  );
 }
 
 export async function loader() {

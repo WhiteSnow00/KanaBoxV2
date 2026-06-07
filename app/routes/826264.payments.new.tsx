@@ -21,7 +21,7 @@ import {
   BASE_PRICE_USD,
   computeStatus,
 } from "~/models/subscriptionStatus";
-import { getTodayDateOnly } from "~/utils/date";
+import { getTodayDateOnly, isValidDateOnly } from "~/utils/date";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -170,8 +170,7 @@ export async function action({ request }: ActionFunctionArgs) {
     errors.months = "Số tháng tối thiểu là 1";
   }
 
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!paidDate || !dateRegex.test(paidDate)) {
+  if (!paidDate || !isValidDateOnly(paidDate)) {
     errors.paidDate = "Vui lòng nhập ngày hợp lệ (YYYY-MM-DD)";
   }
 

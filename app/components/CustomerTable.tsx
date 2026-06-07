@@ -2,7 +2,12 @@ import { Link } from "@remix-run/react";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Eye, StickyNote } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
-import { PaginationControls, paginateItems } from "~/components/shared";
+import {
+  PaginationControls,
+  paginateItems,
+  formatCurrency,
+  statusVariant,
+} from "~/components/shared";
 import { cn } from "~/lib/utils";
 
 export interface CustomerWithStatus {
@@ -51,14 +56,6 @@ interface CustomerTableProps {
   filteredEmptySubtitle?: string;
 }
 
-const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
-  active: "active",
-  due: "due",
-  grace: "grace",
-  expired: "expired",
-  none: "none",
-};
-
 const rowAccent: Record<string, string> = {
   active: "border-l-emerald-400",
   due: "border-l-amber-400",
@@ -66,13 +63,6 @@ const rowAccent: Record<string, string> = {
   expired: "border-l-red-400",
   none: "border-l-zinc-300",
 };
-
-function formatAmount(amount: number, currency: string): string {
-  if (currency === "VND") {
-    return `${Math.round(amount).toLocaleString("vi-VN")} ₫`;
-  }
-  return `$${amount.toFixed(2)}`;
-}
 
 export default function CustomerTable({
   customers,
@@ -170,7 +160,7 @@ export default function CustomerTable({
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm tabular-nums text-zinc-700">
-                    {latestPayment ? formatAmount(latestPayment.amount, latestPayment.currency) : (
+                    {latestPayment ? formatCurrency(latestPayment.amount, latestPayment.currency) : (
                       <span className="text-zinc-300">{t.noPayment}</span>
                     )}
                   </td>
@@ -229,7 +219,7 @@ export default function CustomerTable({
                 <span className="text-zinc-400">{t.headers.latestPayment}:</span>{" "}
                 {latestPayment ? (
                   <span className="font-medium text-zinc-700">
-                    {formatAmount(latestPayment.amount, latestPayment.currency)}
+                    {formatCurrency(latestPayment.amount, latestPayment.currency)}
                   </span>
                 ) : (
                   <span className="text-zinc-300">{t.noPayment}</span>

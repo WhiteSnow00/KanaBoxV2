@@ -65,8 +65,8 @@ function PublicHeader() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-zinc-950 shadow-sm dark:bg-white">
-              <span className="text-sm font-semibold text-white dark:text-zinc-950">K</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-indigo-600 shadow-sm dark:bg-indigo-600">
+              <span className="text-sm font-semibold text-white">K</span>
             </div>
             <div>
               <span className="block text-sm font-semibold text-zinc-950 dark:text-zinc-50">Kana Box</span>

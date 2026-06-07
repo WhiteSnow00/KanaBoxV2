@@ -31,7 +31,7 @@ import {
   computeStatus,
   type Currency,
 } from "~/models/subscriptionStatus";
-import { getTodayDateOnly } from "~/utils/date";
+import { getTodayDateOnly, isValidDateOnly } from "~/utils/date";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -61,20 +61,13 @@ import {
   formatCurrency,
   getPageCount,
   paginateItems,
+  statusVariant,
 } from "~/components/shared";
 import { cn } from "~/lib/utils";
 
 export const meta: MetaFunction = () => [
   { title: "Thành viên lưu trữ - Quản trị - Kana Box V2" },
 ];
-
-const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
-  active: "active",
-  due: "due",
-  grace: "grace",
-  expired: "expired",
-  none: "none",
-};
 
 function serializeArchivedAt(value: Date | string | null | undefined): string | null {
   if (!value) {
@@ -276,8 +269,7 @@ export async function action({ request }: ActionFunctionArgs) {
     errors.months = "Số tháng tối thiểu là 1";
   }
 
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!paidDate || !dateRegex.test(paidDate)) {
+  if (!paidDate || !isValidDateOnly(paidDate)) {
     errors.paidDate = "Vui lòng nhập ngày hợp lệ (YYYY-MM-DD)";
   }
 

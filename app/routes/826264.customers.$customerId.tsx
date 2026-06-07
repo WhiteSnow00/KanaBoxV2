@@ -14,7 +14,7 @@ import {
   cancelRenewal,
   resumeRenewal,
 } from "~/models/customer.server";
-import { listPaymentsForCustomer, voidPayment } from "~/models/payment.server";
+import { getPaymentById, listPaymentsForCustomer, voidPayment } from "~/models/payment.server";
 import { computeStatus } from "~/models/subscriptionStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
@@ -38,15 +38,8 @@ import {
   getPageCount,
   paginateItems,
   statusAccent,
+  statusVariant,
 } from "~/components/shared";
-
-const statusVariant: Record<string, "active" | "due" | "grace" | "expired" | "none"> = {
-  active: "active",
-  due: "due",
-  grace: "grace",
-  expired: "expired",
-  none: "none",
-};
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
   { title: `${data?.customer.name || "Thành viên"} - Quản trị - Kana Box V2` },
@@ -120,7 +113,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
   } else if (intent === "deletePayment") {
     const paymentId = String(formData.get("paymentId") || "");
     if (paymentId && ObjectId.isValid(paymentId)) {
-      await voidPayment(paymentId);
+      // Verify the payment belongs to this customer before voiding
+      const payment = await getPaymentById(paymentId);
+      if (payment && payment.customerId.toString() === customerId) {
+        await voidPayment(paymentId);
+      }
     }
     return redirect(`/826264/customers/${customerId}`);
   }

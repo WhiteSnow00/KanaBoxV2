@@ -111,9 +111,10 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
   const collection = db.collection<Customer>("customers");
 
   const now = new Date();
+  const trimmedNote = input.note?.trim();
   const customer: Omit<Customer, "_id"> = {
     displayName: input.displayName.trim(),
-    note: input.note?.trim() || undefined,
+    ...(trimmedNote ? { note: trimmedNote } : {}),
     createdAt: now,
     updatedAt: now,
   };
@@ -175,14 +176,19 @@ export async function updateCustomerNote(
   const db = await getDb();
   const collection = db.collection<Customer>("customers");
 
+  const trimmedNote = note?.trim();
+  const setOps: Record<string, unknown> = { updatedAt: new Date() };
+  const updateDoc: Record<string, unknown> = { $set: setOps };
+
+  if (trimmedNote) {
+    setOps.note = trimmedNote;
+  } else {
+    updateDoc.$unset = { note: "" };
+  }
+
   const result = await collection.findOneAndUpdate(
     { _id: new ObjectId(id) },
-    {
-      $set: {
-        note: note?.trim() || undefined,
-        updatedAt: new Date(),
-      },
-    },
+    updateDoc,
     { returnDocument: "after" }
   );
 

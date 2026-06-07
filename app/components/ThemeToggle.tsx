@@ -32,13 +32,29 @@ function applyTheme(theme: Theme) {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
     const preferredTheme = getPreferredTheme();
     setTheme(preferredTheme);
     applyTheme(preferredTheme);
   }, []);
+
+  // Render nothing on the server / first client paint to avoid hydration mismatch
+  if (theme === null) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="relative"
+        aria-label="Đang tải giao diện"
+        disabled
+      >
+        <Sun className="h-4 w-4" />
+      </Button>
+    );
+  }
 
   const nextTheme = theme === "dark" ? "light" : "dark";
   const label = theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối";
