@@ -5,6 +5,7 @@ import {
   Scripts,
   ScrollRestoration,
   useRouteError,
+  useLocation,
   Link,
 } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/node";
@@ -80,6 +81,17 @@ function PublicHeader() {
 }
 
 export default function App() {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/826264");
+
+  if (isAdmin) {
+    return (
+      <Document>
+        <Outlet />
+      </Document>
+    );
+  }
+
   return (
     <Document>
       <PublicHeader />
