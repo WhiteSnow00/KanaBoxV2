@@ -12,6 +12,7 @@ import {
 } from "~/components/shared";
 import {
   AlertDialog,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -133,19 +134,27 @@ export default function AdminMemberList({
       return;
     }
 
+    const archivedId = pendingArchiveId;
+    setPendingArchiveId(null);
+
     if (fetcher.data?.error) {
       setOptimisticArchivedIds((current) => {
         const next = new Set(current);
-        next.delete(pendingArchiveId);
+        next.delete(archivedId);
         return next;
       });
       setArchiveError(fetcher.data.error);
     } else if (fetcher.data?.ok) {
       revalidator.revalidate();
     }
-
-    setPendingArchiveId(null);
   }, [fetcher.data, fetcher.state, pendingArchiveId, revalidator]);
+
+  // Clean up optimistic IDs after revalidation brings fresh data
+  useEffect(() => {
+    if (revalidator.state === "idle" && optimisticArchivedIds.size > 0) {
+      setOptimisticArchivedIds(new Set());
+    }
+  }, [revalidator.state, optimisticArchivedIds.size]);
 
   const visibleCustomers = useMemo(
     () => customers.filter((item) => !optimisticArchivedIds.has(item.customer._id)),
@@ -417,34 +426,37 @@ export default function AdminMemberList({
         onPageChange={setPage}
       />
 
-      <AlertDialog open={!!archiveTarget} onOpenChange={(open) => { if (!open) setArchiveTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Lưu trữ thành viên</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc muốn lưu trữ &quot;{archiveTarget?.name}&quot;? Hồ sơ sẽ bị ẩn khỏi bảng nhưng dữ liệu thanh toán vẫn được giữ lại.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setArchiveTarget(null)}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              className="bg-red-600 hover:bg-red-700"
-              disabled={fetcher.state !== "idle"}
-              onClick={handleArchiveConfirm}
-            >
-              {fetcher.state !== "idle" ? "Đang lưu trữ..." : "Lưu trữ"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {archiveTarget && (
+        <AlertDialog
+          defaultOpen
+          onOpenChange={(open) => {
+            if (!open) setArchiveTarget(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Lưu trữ thành viên</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn có chắc muốn lưu trữ &quot;{archiveTarget.name}&quot;? Hồ sơ sẽ bị ẩn khỏi bảng nhưng dữ liệu thanh toán vẫn được giữ lại.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={fetcher.state !== "idle"}>
+                Hủy
+              </AlertDialogCancel>
+              <Button
+                type="button"
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700"
+                disabled={fetcher.state !== "idle"}
+                onClick={handleArchiveConfirm}
+              >
+                {fetcher.state !== "idle" ? "Đang lưu trữ..." : "Lưu trữ"}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }
