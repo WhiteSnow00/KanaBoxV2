@@ -1,6 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
 import { defer } from "@remix-run/node";
-import { Await, Link, useLoaderData } from "@remix-run/react";
+import { Await, Link, useFetcher, useLoaderData } from "@remix-run/react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   Ban,
@@ -11,6 +11,9 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  Globe2,
+  Loader2,
+  PowerOff,
 } from "lucide-react";
 import { countCustomers, listCustomers } from "~/models/customer.server";
 import {
@@ -20,6 +23,8 @@ import {
   listPaymentsForRevenueWindow,
 } from "~/models/payment.server";
 import { getMonthBucket, getRevenueBucketRange, getTodayDateOnly } from "~/utils/date";
+import { getSiteSettings } from "~/models/siteSettings.server";
+import { cn } from "~/lib/utils";
 import AdminMemberList, {
   type AdminMemberWithStatus,
   type AdminStatusFilter,
@@ -88,10 +93,11 @@ async function loadMonthlyTotals(): Promise<MonthlyTotal[]> {
 
 export async function loader() {
   const monthlyTotals = loadMonthlyTotals();
-  const [totalCustomers, customers, latestPaymentsMap] = await Promise.all([
+  const [totalCustomers, customers, latestPaymentsMap, siteSettings] = await Promise.all([
     countCustomers(),
     listCustomers(),
     listLatestPaymentsForAllCustomers(),
+    getSiteSettings(),
   ]);
   const statusCounts = {
     active: 0,
@@ -139,6 +145,7 @@ export async function loader() {
     statusCounts,
     monthlyTotals,
     customers: customersWithStatus,
+    publicSiteDisabled: siteSettings.publicSiteDisabled,
   });
 }
 
@@ -231,10 +238,27 @@ export default function AdminDashboard() {
     statusCounts,
     monthlyTotals,
     customers,
+    publicSiteDisabled,
   } = useLoaderData<typeof loader>();
+  const siteStatusFetcher = useFetcher<{
+    ok: boolean;
+    error?: string;
+    publicSiteDisabled?: boolean;
+  }>();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<AdminStatusFilter>(null);
   const [cancelledOnly, setCancelledOnly] = useState(false);
+  const pendingPublicSiteDisabled = siteStatusFetcher.formData?.get(
+    "publicSiteDisabled"
+  );
+  const displayedPublicSiteDisabled =
+    pendingPublicSiteDisabled === "true"
+      ? true
+      : pendingPublicSiteDisabled === "false"
+        ? false
+        : publicSiteDisabled;
+  const publicSiteEnabled = !displayedPublicSiteDisabled;
+  const isUpdatingPublicSite = siteStatusFetcher.state !== "idle";
 
   const filteredCustomers = customers.filter((item) => {
     const matchesSearch = item.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -249,6 +273,96 @@ export default function AdminDashboard() {
         title="Bảng điều khiển"
         description="Quản lý đăng ký và xem báo cáo doanh thu"
       />
+
+      <Card
+        className={cn(
+          "overflow-hidden",
+          displayedPublicSiteDisabled
+            ? "border-amber-200"
+            : "border-emerald-200"
+        )}
+      >
+        <CardContent className="flex flex-col gap-5 pt-5 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
+          <div className="flex items-start gap-3.5">
+            <div
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border",
+                displayedPublicSiteDisabled
+                  ? "border-amber-200 bg-amber-50 text-amber-600"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-600"
+              )}
+            >
+              {displayedPublicSiteDisabled ? (
+                <PowerOff className="h-5 w-5" />
+              ) : (
+                <Globe2 className="h-5 w-5" />
+              )}
+            </div>
+            <div>
+              <h2 className="font-semibold text-zinc-950 dark:text-zinc-50">
+                Trang công khai
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                {displayedPublicSiteDisabled
+                  ? "Đang hiển thị thông báo “Group không còn hoạt động” trên tất cả trang công khai."
+                  : "Khách truy cập hiện có thể xem và điều hướng trên trang công khai."}
+              </p>
+              {siteStatusFetcher.data?.ok === false && (
+                <p className="mt-2 text-sm font-medium text-red-600">
+                  {siteStatusFetcher.data.error}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <siteStatusFetcher.Form
+            method="post"
+            action="/826264"
+            className="shrink-0"
+          >
+            <input
+              type="hidden"
+              name="publicSiteDisabled"
+              value={String(!displayedPublicSiteDisabled)}
+            />
+            <button
+              type="submit"
+              name="intent"
+              value="set-public-site-disabled"
+              role="switch"
+              aria-checked={publicSiteEnabled}
+              aria-label="Bật hoặc tắt trang công khai"
+              disabled={isUpdatingPublicSite}
+              className="inline-flex h-10 min-w-40 items-center justify-center gap-2.5 rounded-md border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-700 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-zinc-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600"
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors",
+                  publicSiteEnabled ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+                    publicSiteEnabled && "translate-x-5"
+                  )}
+                />
+              </span>
+              <span>
+                {isUpdatingPublicSite
+                  ? "Đang cập nhật"
+                  : publicSiteEnabled
+                    ? "Đang hoạt động"
+                    : "Đang đóng"}
+              </span>
+              {isUpdatingPublicSite && (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              )}
+            </button>
+          </siteStatusFetcher.Form>
+        </CardContent>
+      </Card>
 
       <div className="reveal-list grid grid-cols-2 gap-3 lg:grid-cols-6">
         <StatCard

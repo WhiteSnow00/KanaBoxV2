@@ -4,15 +4,19 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
   useRouteError,
   useLocation,
   Link,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import ThemeToggle from "~/components/ThemeToggle";
+import PublicSiteInactive from "~/components/PublicSiteInactive";
+import { getSiteSettings } from "~/models/siteSettings.server";
 
 import stylesheet from "~/tailwind.css?url";
 
@@ -21,6 +25,24 @@ export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
 ];
+
+function isAdminPath(pathname: string) {
+  return pathname === "/826264" || pathname.startsWith("/826264/");
+}
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { publicSiteDisabled } = await getSiteSettings();
+  const pathname = new URL(request.url).pathname;
+
+  if (publicSiteDisabled && !isAdminPath(pathname) && pathname !== "/") {
+    throw redirect("/");
+  }
+
+  return json(
+    { publicSiteDisabled },
+    { headers: { "Cache-Control": "no-store" } }
+  );
+}
 
 const themeInitScript = `
 (() => {
@@ -81,13 +103,22 @@ function PublicHeader() {
 }
 
 export default function App() {
+  const { publicSiteDisabled } = useLoaderData<typeof loader>();
   const location = useLocation();
-  const isAdmin = location.pathname.startsWith("/826264");
+  const isAdmin = isAdminPath(location.pathname);
 
   if (isAdmin) {
     return (
       <Document>
         <Outlet />
+      </Document>
+    );
+  }
+
+  if (publicSiteDisabled) {
+    return (
+      <Document title="Group không còn hoạt động / Group no longer active">
+        <PublicSiteInactive />
       </Document>
     );
   }

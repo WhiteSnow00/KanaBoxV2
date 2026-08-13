@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ObjectId } from "mongodb";
 import { archiveCustomer } from "~/models/customer.server";
+import { setPublicSiteDisabled } from "~/models/siteSettings.server";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import ThemeToggle from "~/components/ThemeToggle";
@@ -23,6 +24,26 @@ import ThemeToggle from "~/components/ThemeToggle";
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const intent = String(formData.get("intent") || "");
+  if (intent === "set-public-site-disabled") {
+    const rawValue = formData.get("publicSiteDisabled");
+    if (rawValue !== "true" && rawValue !== "false") {
+      return json(
+        { ok: false, error: "Trạng thái trang công khai không hợp lệ" },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const settings = await setPublicSiteDisabled(rawValue === "true");
+      return json({ ok: true, ...settings });
+    } catch (error) {
+      console.error("Error updating public site status:", error);
+      return json(
+        { ok: false, error: "Không thể cập nhật trạng thái trang công khai" },
+        { status: 500 }
+      );
+    }
+  }
   if (intent === "archive") {
     const customerId = String(formData.get("customerId") || "");
     if (!customerId || !ObjectId.isValid(customerId)) {

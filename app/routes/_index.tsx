@@ -12,6 +12,7 @@ import CustomerTable from "~/components/CustomerTable";
 import PublicLanguageSelect from "~/components/PublicLanguageSelect";
 import { getPublicStrings, normalizePublicLang } from "~/i18n/public";
 import { PageHeader, SearchField, StatCard } from "~/components/shared";
+import { getSiteSettings } from "~/models/siteSettings.server";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   const lang = data?.lang === "en" ? "en" : "vi";
@@ -24,6 +25,23 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const searchQuery = url.searchParams.get("q") || "";
   const lang = normalizePublicLang(url.searchParams.get("lang"));
   const strings = getPublicStrings(lang);
+  const { publicSiteDisabled } = await getSiteSettings();
+
+  // The root renders the inactive page. Keep member data out of the hydration
+  // payload while the public site is closed.
+  if (publicSiteDisabled) {
+    return json(
+      {
+        customers: [],
+        searchQuery: "",
+        lang,
+        statusCounts: { active: 0, due: 0, grace: 0, expired: 0 },
+        totalCount: 0,
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const customers = await listCustomers(searchQuery, { publicOnly: false });
   const today = getTodayDateOnly();
   const latestPaymentsMap = await listLatestPaymentsForAllCustomers();
